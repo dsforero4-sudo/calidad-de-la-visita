@@ -678,7 +678,7 @@ st.markdown("<span style='color: #B7BCC9;'>Evaluación cualitativa de la recepti
 st.markdown("---")
 
 col_impacto = buscar_columna(df_visitas, ['Comentario de Impacto', 'Comentario impacto', 'Comentario', 'Impacto'])
-col_prod_visita = buscar_columna(df_visitas, ['Producto', 'Producto promocionado', 'Marca'])
+col_prod_visita = buscar_columna(df_visitas, ['Impactos', 'Producto', 'Producto promocionado', 'Marca'])
 
 if col_impacto and col_impacto in df_visitas.columns:
     
@@ -688,17 +688,18 @@ if col_impacto and col_impacto in df_visitas.columns:
     with col_f_prod:
         st.markdown("##### 🔍 Filtrar por Producto")
         if col_prod_visita and col_prod_visita in df_visitas.columns:
-            productos_disp = sorted(df_visitas[col_prod_visita].dropna().unique().tolist())
+            # Extraer y limpiar productos únicos de la columna "Impactos"
+            productos_disp = sorted([str(p).strip() for p in df_visitas[col_prod_visita].dropna().unique() if str(p).strip() != '' and str(p).strip() != '-'])
             selected_producto = st.selectbox("Seleccione Producto", options=["Todos los Productos"] + productos_disp, key="select_prod_actitud")
         else:
             selected_producto = "Todos los Productos"
-            st.info("La columna de producto no está en el listado de visitas, mostrando general.")
+            st.info("La columna 'Impactos' no está disponible en el listado de visitas.")
 
     with col_g_chart:
-        # Filtrar DataFrame según selección
+        # Filtrar DataFrame según la selección del producto en la columna "Impactos"
         df_act_filtered = df_visitas.copy()
         if selected_producto != "Todos los Productos" and col_prod_visita and col_prod_visita in df_act_filtered.columns:
-            df_act_filtered = df_act_filtered[df_act_filtered[col_prod_visita] == selected_producto]
+            df_act_filtered = df_act_filtered[df_act_filtered[col_prod_visita].astype(str).str.strip() == selected_producto]
 
         df_actitud_eval = df_act_filtered.drop_duplicates(subset=[col_visita]).copy() if col_visita in df_act_filtered.columns else df_act_filtered.copy()
         
