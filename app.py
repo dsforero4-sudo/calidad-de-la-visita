@@ -166,7 +166,6 @@ st.sidebar.subheader("2. Parámetros del Informe Gerencial")
 cliente_input = st.sidebar.text_input("Nombre del Cliente / Cuenta", value="Essity / Leukoacademy", key="input_cliente_rep")
 lineas_input = st.sidebar.text_input("Líneas / Segmento del Informe", value="Línea Institucional y Médica", key="input_lineas_rep")
 
-# Carga de datos robusta utilizando el búfer nativo de Streamlit
 df_visitas = None
 df_impactos = None
 
@@ -179,7 +178,7 @@ if uploaded_file is not None:
         uploaded_file.seek(0)
         df_visitas = pd.read_excel(uploaded_file, sheet_name=hoja_seleccionada)
         df_visitas.columns = df_visitas.columns.astype(str).str.strip()
-        st.sidebar.success(f"✅ Visitas cargadas ({len(df_visitas):,} registros)")
+        st.sidebar.success(f"Visitas cargadas ({len(df_visitas):,} registros)")
     except Exception as e:
         st.sidebar.error(f"Error al leer archivo de visitas: {e}")
 
@@ -190,7 +189,7 @@ elif os.path.exists('listado_visitas_2026-09-07_11-44-08.xlsx'):
         hoja_seleccionada = st.sidebar.selectbox("Seleccione la Hoja de Visitas", options=xls.sheet_names, key="select_hoja_excel")
         df_visitas = pd.read_excel(default_path, sheet_name=hoja_seleccionada)
         df_visitas.columns = df_visitas.columns.astype(str).str.strip()
-        st.sidebar.success(f"✅ Visitas locales cargadas ({len(df_visitas):,} registros)")
+        st.sidebar.success(f"Visitas locales cargadas ({len(df_visitas):,} registros)")
     except Exception as e:
         st.sidebar.error(f"Error al leer archivo local: {e}")
 
@@ -203,90 +202,4 @@ if uploaded_impactos is not None:
         
         specialties = []
         curr_spec = "GENERAL"
-        for val in row9:
-            if pd.notna(val) and str(val).strip() != '': 
-                curr_spec = str(val).strip()
-            specialties.append(curr_spec)
-            
-        records = []
-        current_region = "DESCONOCIDA"
-        
-        for idx in range(11, len(df_raw)):
-            col0 = df_raw.iloc[idx, 0]
-            col1 = df_raw.iloc[idx, 1]
-            if pd.isna(col0) or pd.isna(col1): 
-                continue
-            col0_str = str(col0).strip()
-            
-            if col0_str.lower().startswith("region") or col0_str.lower().startswith("región"):
-                current_region = col0_str.replace("Región", "").replace("Region", "").strip()
-                continue
-            if col0_str.startswith("DISTRITO"): 
-                continue
-            
-            rep_text = col0_str
-            producto = str(col1).strip()
-            coordinacion = "COORDINACION CL" if "CL" in current_region.upper() or "CL" in rep_text.upper() or "ANTIOQUIA" in rep_text.upper() or "COSTA" in rep_text.upper() or "SANTANDER" in rep_text.upper() else "COORDINACION PS"
-            
-            for c_idx in range(2, len(row10), 3):
-                if c_idx >= df_raw.shape[1]: 
-                    break
-                spec = specialties[c_idx]
-                imp_esp = df_raw.iloc[idx, c_idx]
-                imp_real = df_raw.iloc[idx, c_idx + 1]
-                
-                if pd.notna(imp_esp) and str(imp_esp).strip() != '-' and str(imp_esp).strip() != '':
-                    try:
-                        esp_val = float(imp_esp)
-                        real_val = float(imp_real) if pd.notna(imp_real) and str(imp_real).strip() != '-' else 0.0
-                        records.append({
-                            'Región': coordinacion, 
-                            'Representante_Raw': rep_text, 
-                            'Producto': producto, 
-                            'Especialidad': spec, 
-                            'Imp_Esp': esp_val, 
-                            'Imp_Real': real_val
-                        })
-                    except: 
-                        pass
-        df_impactos = pd.DataFrame(records)
-        st.sidebar.success(f"✅ Impactos cargados ({len(df_impactos):,} registros)")
-    except Exception as e:
-        st.sidebar.error(f"Error procesando impactos: {e}")
-
-if df_visitas is not None:
-    def buscar_columna(df, posibles_nombres):
-        cols_lower = {str(c).lower().strip(): c for c in df.columns}
-        for p in posibles_nombres:
-            if p.lower().strip() in cols_lower:
-                return cols_lower[p.lower().strip()]
-        return None
-
-    col_reg = buscar_columna(df_visitas, ['Región', 'Region', 'Coordinación', 'Coordinacion', 'Distrito', 'Zona'])
-    col_ciclo = buscar_columna(df_visitas, ['Ciclo', 'Periodo', 'Mes'])
-    col_lin = buscar_columna(df_visitas, ['Línea', 'Linea', 'Estrategia'])
-    col_rep = buscar_columna(df_visitas, ['Representante', 'Asesor', 'Ejecutivo'])
-    col_visita = buscar_columna(df_visitas, ['Cod. visita', 'Cod visita', 'Código visita', 'Codigo visita', 'Id visita', 'Visita'])
-    col_fecha = buscar_columna(df_visitas, ['Fecha visita', 'Fecha', 'Date'])
-    col_hora = buscar_columna(df_visitas, ['Hora digitado', 'Hora', 'Time'])
-    col_med = buscar_columna(df_visitas, ['Nombre farmacia o cliente', 'Farmacia', 'Médicos', 'Medicos', 'Cliente', 'Institución', 'Institucion', 'Nombre'])
-    col_obj = buscar_columna(df_visitas, ['Objetivo', 'Obj', 'Objetivos'])
-    col_com = buscar_columna(df_visitas, ['Comentario', 'Comentarios', 'Observación', 'Observacion'])
-    col_acomp = buscar_columna(df_visitas, ['Visita acompañada', 'Visita acompanada', 'Acompañada', 'Acompañamiento'])
-    col_muestra = buscar_columna(df_visitas, ['Material entregado', 'Muestra', 'Muestras'])
-    col_cant_muestra = buscar_columna(df_visitas, ['Cantidad de material', 'Cantidad', 'Cant'])
-    col_impacto_prod = buscar_columna(df_visitas, ['Impactos', 'Impacto', 'Producto'])
-
-    if not col_visita:
-        col_visita = df_visitas.columns[0]
-    if not col_rep:
-        col_rep = df_visitas.columns[0]
-    if not col_reg:
-        df_visitas['Región_Default'] = 'Nacional'
-        col_reg = 'Región_Default'
-    if not col_ciclo:
-        df_visitas['Ciclo_Default'] = 'Ciclo Único'
-        col_ciclo = 'Ciclo_Default'
-    if not col_lin:
-        df_visitas['Linea_Default'] = 'General'
-        col_lin = 'Linea_
+        for val in row
