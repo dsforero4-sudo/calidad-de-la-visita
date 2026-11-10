@@ -203,3 +203,6 @@ if uploaded_impactos is not None:
         specialties = []
         curr_spec = "GENERAL"
         for val in row9:
+            if pd.notna(val) and str(val).strip() != '': 
+                curr_spec = str(val).strip()
+            specialties.append(curr_spec)
