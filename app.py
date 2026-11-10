@@ -306,17 +306,4 @@ if df_visitas is not None:
     
     representantes = sorted(df_filtered[col_rep].dropna().unique()) if col_rep else []
     
-    selected_reps = st.sidebar.multiselect("Representante", options=representantes, default=representantes, key="filtro_rep")
-    
-    df_filtered = df_filtered[df_filtered[col_rep].isin(selected_reps)] if col_rep and selected_reps else df_filtered
-    
-    df_unique = df_filtered.drop_duplicates(subset=[col_visita]).copy()
-    
-    df_unique['Comentario_Clean'] = df_unique[col_com].fillna('').astype(str).str.strip().str.lower()
-    df_unique['Rep_Comentario_Count'] = df_unique.groupby([col_rep, 'Comentario_Clean'])[col_visita].transform('count')
-    
-    def check_repetido_individual(row):
-        com = row['Comentario_Clean']
-        if com in ['', 'nan', 'none', '-']: 
-            return False
-        return row['Rep_
+    selected_reps = st.sidebar.mult
