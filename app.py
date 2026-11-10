@@ -280,45 +280,37 @@ st.markdown("<span style='color: #B7BCC9;'>Evaluación y auditoría de la calida
 st.markdown("---")
 
 if df_visitas is not None:
-    # Búsqueda de columnas relevantes para los objetivos
     col_obj_texto = buscar_columna(df_visitas, ['Objetivo', 'Objetivo de visita', 'Meta', 'Propósito'])
     col_calificacion = buscar_columna(df_visitas, ['Calificación SMART', 'Calificacion', 'Evaluación Objetivo', 'Score'])
     col_argumento = buscar_columna(df_visitas, ['Argumentación', 'Argumentacion', 'Justificación', 'Comentario Objetivo', 'Motivo'])
 
     total_v = len(df_unique)
     
-    # Métricas clave de la sección
     col_obj1, col_obj2, col_obj3 = st.columns(3)
     col_obj1.metric("Visitas Evaluadas", f"{total_v:,}")
     
-    # Simulamos o calculamos los objetivos calificados si las columnas existen en el archivo
     validados_count = 0
     if col_calificacion and col_calificacion in df_visitas.columns:
-        validados_count = int(df_visitas[df_calificacion].astype(str).str.lower().isin(['cumple', 'valido', 'sí', 'si', 'aprobado']).sum())
+        validados_count = int(df_visitas[col_calificacion].astype(str).str.lower().isin(['cumple', 'valido', 'sí', 'si', 'aprobado']).sum())
     
     col_obj2.metric("Objetivos Validados (SMART)", f"{validados_count:,}")
     col_obj3.metric("Objetivos por Mejorar / Pendientes", f"{total_v - validados_count:,}")
 
     st.markdown("---")
 
-    # Preparación de los datos para visualización y exportación
     df_export = df_visitas.copy()
-    
-    # Si no existen las columnas exactas de calificación o argumentación en el archivo bruto, 
-    # generamos una estructura estándar de auditoría para asegurar que el exportable no falle.
     if not col_calificacion:
         df_export['Calificación SMART'] = "Pendiente de revisión"
     if not col_argumento:
         df_export['Argumentación'] = "Sin argumentación registrada en el reporte base."
 
-    # Botón de Exportación (Excel / CSV)
     st.markdown("##### 📥 Exportar Detalle de Objetivos y Argumentaciones")
     st.markdown("<span style='color: #B7BCC9;'>Descarga el reporte detallado con la calificación y el sustento argumentativo por visita.</span>", unsafe_allow_html=True)
 
-    # Función para convertir dataframe a Excel en memoria para descarga
     import io
     output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+    # Usamos 'openpyxl' en lugar de 'xlsxwriter' para evitar errores de dependencias
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df_export.to_excel(writer, index=False, sheet_name='Auditoria_Objetivos_SMART')
     processed_data = output.getvalue()
 
@@ -331,9 +323,7 @@ if df_visitas is not None:
     )
 
 else:
-    st.info("👈 Por favor cargue el **Listado de Visitas** en la barra lateral para habilitar la validación y el exportable de objetivos.")
-
-# ==========================================
+    st.info("👈 Por favor cargue el **Listado de Visitas** en la barra lateral para habilitar la validación y el exportable de objetivos.")# ==========================================
 # SECCIÓN 1.1: MANEJO DE LA ACTITUD Y CIERRE (COPY-PASTE EN OBJETIVOS)
 # ==========================================
 st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
