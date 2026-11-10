@@ -685,3 +685,50 @@ if col_impacto and col_impacto in df_visitas.columns:
         st.plotly_chart(fig_pie_actitud, use_container_width=True)
 else:
     st.warning("⚠️ No se encontró la columna 'Comentario de Impacto' en el archivo de visitas cargado.")
+
+# --- PARTE 2: Gráfica de Barras Horizontales Apiladas al 100% por Producto ---
+    st.markdown("### 📊 Distribución Porcentual de Actitud por Producto")
+    st.markdown("<span style='color: #B7BCC9;'>Comparativa 100% apilada de la receptividad médica frente a cada producto promocionado.</span>", unsafe_allow_html=True)
+
+    if col_prod_visita and col_prod_visita in df_visitas.columns:
+        df_bar_data = df_visitas.copy()
+        df_bar_data[col_prod_visita] = df_bar_data[col_prod_visita].astype(str).str.strip()
+        df_bar_data = df_bar_data[~df_bar_data[col_prod_visita].isin(['', '-'])]
+        
+        df_bar_data['Comentario_Clean'] = df_bar_data[col_impacto].fillna('Sin sondeo').astype(str).str.strip()
+        df_bar_data['Comentario_Clean'] = df_bar_data['Comentario_Clean'].replace(['-', '', 'nan', 'none', 'NaN', 'NAN'], 'Sin sondeo')
+
+        # Tabla pivotada de frecuencias por producto y actitud
+        df_pivot = pd.crosstab(df_bar_data[col_prod_visita], df_bar_data['Comentario_Clean'], normalize='index') * 100
+        df_pivot = df_pivot.reset_index()
+
+        fig_stack_100 = go.Figure()
+        
+        for col_name in df_pivot.columns:
+            if col_name != col_prod_visita:
+                fig_stack_100.add_trace(go.Bar(
+                    y=df_pivot[col_prod_visita],
+                    x=df_pivot[col_name],
+                    name=col_name,
+                    orientation='h',
+                    text=df_pivot[col_name].round(1).astype(str) + '%',
+                    textposition='inside'
+                ))
+
+        fig_stack_100.update_layout(
+            barmode='stack',
+            template='plotly_dark',
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            height=500,
+            xaxis=dict(title="Porcentaje (%)", range=[0, 100]),
+            yaxis=dict(title="Producto"),
+            font=dict(color='white'),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        )
+        st.plotly_chart(fig_stack_100, use_container_width=True)
+    else:
+        st.info("No se encontró la columna de productos para generar la gráfica apilada.")
+
+else:
+    st.warning("⚠️ No se encontró la columna 'Comentario de Impacto' en el archivo de visitas cargado.")
