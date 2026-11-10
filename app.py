@@ -178,7 +178,7 @@ if uploaded_file is not None:
         
         uploaded_file.seek(0)
         df_visitas = pd.read_excel(uploaded_file, sheet_name=hoja_seleccionada)
-        df_visitas.columns = df_visitas.columns.astype(str).str.strip()
+        df_visitas.columns = [str(c).strip() for c in df_visitas.columns]
         st.sidebar.success(f"Visitas cargadas ({len(df_visitas):,} registros)")
     except Exception as e:
         st.sidebar.error(f"Error al leer archivo de visitas: {e}")
@@ -189,4 +189,105 @@ elif os.path.exists('listado_visitas_2026-09-07_11-44-08.xlsx'):
         xls = pd.ExcelFile(default_path)
         hoja_seleccionada = st.sidebar.selectbox("Seleccione la Hoja de Visitas", options=xls.sheet_names, key="select_hoja_excel")
         df_visitas = pd.read_excel(default_path, sheet_name=hoja_seleccionada)
-        df_visitas.columns = df_visitas.columns.astype(str
+        df_visitas.columns = [str(c).strip() for c in df_visitas.columns]
+        st.sidebar.success(f"Visitas locales cargadas ({len(df_visitas):,} registros)")
+    except Exception as e:
+        st.sidebar.error(f"Error al leer archivo local: {e}")
+
+if uploaded_impactos is not None:
+    try:
+        uploaded_impactos.seek(0)
+        df_raw = pd.read_excel(uploaded_impactos, sheet_name='Consulta', header=None)
+        row9 = df_raw.iloc[9].values
+        row10 = df_raw.iloc[10].values
+        
+        specialties = []
+        curr_spec = "GENERAL"
+        for val in row9:
+            if pd.notna(val) and str(val).strip() != '': 
+                curr_spec = str(val).strip()
+            specialties.append(curr_spec)
+            
+        records = []
+        current_region = "DESCONOCIDA"
+        
+        for idx in range(11, len(df_raw)):
+            col0 = df_raw.iloc[idx, 0]
+            col1 = df_raw.iloc[idx, 1]
+            if pd.isna(col0) or pd.isna(col1): 
+                continue
+            col0_str = str(col0).strip()
+            
+            if col0_str.lower().startswith("region") or col0_str.lower().startswith("región"):
+                current_region = col0_str.replace("Región", "").replace("Region", "").strip()
+                continue
+            if col0_str.startswith("DISTRITO"): 
+                continue
+            
+            rep_text = col0_str
+            producto = str(col1).strip()
+            coordinacion = "COORDINACION CL" if "CL" in current_region.upper() or "CL" in rep_text.upper() or "ANTIOQUIA" in rep_text.upper() or "COSTA" in rep_text.upper() or "SANTANDER" in rep_text.upper() else "COORDINACION PS"
+            
+            for c_idx in range(2, len(row10), 3):
+                if c_idx >= df_raw.shape[1]: 
+                    break
+                spec = specialties[c_idx]
+                imp_esp = df_raw.iloc[idx, c_idx]
+                imp_real = df_raw.iloc[idx, c_idx + 1]
+                
+                if pd.notna(imp_esp) and str(imp_esp).strip() != '-' and str(imp_esp).strip() != '':
+                    try:
+                        esp_val = float(imp_esp)
+                        real_val = float(imp_real) if pd.notna(imp_real) and str(imp_real).strip() != '-' else 0.0
+                        records.append({
+                            'Región': coordinacion, 
+                            'Representante_Raw': rep_text, 
+                            'Producto': producto, 
+                            'Especialidad': spec, 
+                            'Imp_Esp': esp_val, 
+                            'Imp_Real': real_val
+                        })
+                    except: 
+                        pass
+        df_impactos = pd.DataFrame(records)
+        st.sidebar.success(f"Impactos cargados ({len(df_impactos):,} registros)")
+    except Exception as e:
+        st.sidebar.error(f"Error procesando impactos: {e}")
+
+if df_visitas is None:
+    data_dummy = {
+        'Cod. visita': [1, 2],
+        'Representante': ['Representante A', 'Representante B'],
+        'Región': ['Nacional', 'Nacional'],
+        'Ciclo': ['Ciclo 1', 'Ciclo 1'],
+        'Línea': ['General', 'General'],
+        'Fecha': ['2026-09-01', '2026-09-02'],
+        'Hora': ['09:00:00', '20:30:00'],
+        'Cliente': ['Dr. Juan Pérez', 'Dra. María Gómez'],
+        'Objetivo': ['Entregar material y saludar', 'Visitar médico'],
+        'Comentario': ['Excelente receptividad al producto.', 'Excelente receptividad al producto.']
+    }
+    df_visitas = pd.DataFrame(data_dummy)
+    st.sidebar.info("ℹ️ Usando datos de respaldo predeterminados. Carga tu archivo Excel arriba para ver tus datos reales.")
+
+def buscar_columna(df, posibles_nombres):
+    cols_lower = {str(c).lower().strip(): c for c in df.columns}
+    for p in posibles_nombres:
+        if p.lower().strip() in cols_lower:
+            return cols_lower[p.lower().strip()]
+    return None
+
+col_reg = buscar_columna(df_visitas, ['Región', 'Region', 'Coordinación', 'Coordinacion', 'Distrito', 'Zona'])
+col_ciclo = buscar_columna(df_visitas, ['Ciclo', 'Periodo', 'Mes'])
+col_lin = buscar_columna(df_visitas, ['Línea', 'Linea', 'Estrategia'])
+col_rep = buscar_columna(df_visitas, ['Representante', 'Asesor', 'Ejecutivo'])
+col_visita = buscar_columna(df_visitas, ['Cod. visita', 'Cod visita', 'Código visita', 'Codigo visita', 'Id visita', 'Visita'])
+col_fecha = buscar_columna(df_visitas, ['Fecha visita', 'Fecha', 'Date'])
+col_hora = buscar_columna(df_visitas, ['Hora digitado', 'Hora', 'Time'])
+col_med = buscar_columna(df_visitas, ['Nombre farmacia o cliente', 'Farmacia', 'Médicos', 'Medicos', 'Cliente', 'Institución', 'Institucion', 'Nombre'])
+col_obj = buscar_columna(df_visitas, ['Objetivo', 'Obj', 'Objetivos'])
+col_com = buscar_columna(df_visitas, ['Comentario', 'Comentarios', 'Observación', 'Observacion'])
+
+if not col_visita: col_visita = df_visitas.columns[0]
+if not col_rep: col_rep = df_visitas.columns[0]
+if not col_reg:
