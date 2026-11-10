@@ -123,3 +123,167 @@ st.markdown("""
     }
     div[data-testid="stMetric"] label {
         color: #B7BCC9 !important;
+        font-size: 13px !important;
+    }
+    div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
+        color: #3DD6FF !important;
+        font-size: 28px !important;
+        font-weight: bold !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+    <div class="ph-header">
+        <div>
+            <h1 class="ph-title">Evaluación de la Calidad de la Visita - Pharmadvisor</h1>
+            <span style="color: #B7BCC9; font-size: 13px;">Auditoría Integral en 5 Secciones | Metodología Comercial y Técnica de Ventas</span>
+        </div>
+        <div style="text-align: right;">
+            <span style="color: #FF2D8F; font-weight: bold; font-size: 20px;">Pharm<span style="color: #3DD6FF;">Advisor</span></span>
+        </div>
+    </div>
+""", unsafe_allow_html=True)
+
+st.sidebar.subheader("1. Carga de Reportes")
+uploaded_file = st.sidebar.file_uploader("Cargar Listado de Visitas (.xlsx)", type=["xlsx"], key="visitas_validador")
+uploaded_impactos = st.sidebar.file_uploader("Cargar Impactos Promocionales (.xlsx)", type=["xlsx"], key="impactos_validador")
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("2. Parámetros del Informe Gerencial")
+cliente_input = st.sidebar.text_input("Nombre del Cliente / Cuenta", value="Essity / Leukoacademy", key="input_cliente_rep")
+lineas_input = st.sidebar.text_input("Líneas / Segmento del Informe", value="Línea Institucional y Médica", key="input_lineas_rep")
+
+@st.cache_data
+def cargar_datos_hoja(source_bytes, hoja_nombre):
+    try:
+        df = pd.read_excel(io.BytesIO(source_bytes), sheet_name=hoja_nombre)
+        df.columns = df.columns.astype(str).str.strip()
+        return df
+    except Exception as e:
+        st.error(f"Error en cargar_datos_hoja: {e}")
+        return None
+
+@st.cache_data
+def procesar_archivo_impactos(file_bytes):
+    if file_bytes is None: 
+        return None
+    try:
+        df_raw = pd.read_excel(io.BytesIO(file_bytes), sheet_name='Consulta', header=None)
+        row9 = df_raw.iloc[9].values
+        row10 = df_raw.iloc[10].values
+        
+        specialties = []
+        curr_spec = "GENERAL"
+        for val in row9:
+            if pd.notna(val) and str(val).strip() != '': 
+                curr_spec = str(val).strip()
+            specialties.append(curr_spec)
+            
+        records = []
+        current_region = "DESCONOCIDA"
+        
+        for idx in range(11, len(df_raw)):
+            col0 = df_raw.iloc[idx, 0]
+            col1 = df_raw.iloc[idx, 1]
+            if pd.isna(col0) or pd.isna(col1): 
+                continue
+            col0_str = str(col0).strip()
+            
+            if col0_str.lower().startswith("region") or col0_str.lower().startswith("región"):
+                current_region = col0_str.replace("Región", "").replace("Region", "").strip()
+                continue
+            if col0_str.startswith("DISTRITO"): 
+                continue
+            
+            rep_text = col0_str
+            producto = str(col1).strip()
+            coordinacion = "COORDINACION CL" if "CL" in current_region.upper() or "CL" in rep_text.upper() or "ANTIOQUIA" in rep_text.upper() or "COSTA" in rep_text.upper() or "SANTANDER" in rep_text.upper() else "COORDINACION PS"
+            
+            for c_idx in range(2, len(row10), 3):
+                if c_idx >= df_raw.shape[1]: 
+                    break
+                spec = specialties[c_idx]
+                imp_esp = df_raw.iloc[idx, c_idx]
+                imp_real = df_raw.iloc[idx, c_idx + 1]
+                
+                if pd.notna(imp_esp) and str(imp_esp).strip() != '-' and str(imp_esp).strip() != '':
+                    try:
+                        esp_val = float(imp_esp)
+                        real_val = float(imp_real) if pd.notna(imp_real) and str(imp_real).strip() != '-' else 0.0
+                        records.append({
+                            'Región': coordinacion, 
+                            'Representante_Raw': rep_text, 
+                            'Producto': producto, 
+                            'Especialidad': spec, 
+                            'Imp_Esp': esp_val, 
+                            'Imp_Real': real_val
+                        })
+                    except: 
+                        pass
+        return pd.DataFrame(records)
+    except Exception as e: 
+        st.error(f"Error procesando impactos: {e}")
+        return None
+
+df_visitas = None
+default_path = 'listado_visitas_2026-09-07_11-44-08.xlsx'
+
+source_bytes = None
+if uploaded_file is not None:
+    source_bytes = uploaded_file.getvalue()
+elif os.path.exists(default_path):
+    with open(default_path, "rb") as f:
+        source_bytes = f.read()
+
+if source_bytes is not None:
+    try:
+        xls = pd.ExcelFile(io.BytesIO(source_bytes))
+        hoja_seleccionada = st.sidebar.selectbox("Seleccione la Hoja de Visitas", options=xls.sheet_names, key="select_hoja_excel")
+        df_visitas = cargar_datos_hoja(source_bytes, hoja_seleccionada)
+    except Exception as e:
+        st.sidebar.error(f"Error procesando archivo de visitas: {e}")
+        df_visitas = None
+
+df_impactos = procesar_archivo_impactos(uploaded_impactos.getvalue() if uploaded_impactos is not None else None)
+
+if df_visitas is not None:
+    def buscar_columna(df, posibles_nombres):
+        cols_lower = {str(c).lower().strip(): c for c in df.columns}
+        for p in posibles_nombres:
+            if p.lower().strip() in cols_lower:
+                return cols_lower[p.lower().strip()]
+        return None
+
+    col_reg = buscar_columna(df_visitas, ['Región', 'Region', 'Coordinación', 'Coordinacion'])
+    col_ciclo = buscar_columna(df_visitas, ['Ciclo', 'Periodo', 'Mes'])
+    col_lin = buscar_columna(df_visitas, ['Línea', 'Linea', 'Estrategia'])
+    col_rep = buscar_columna(df_visitas, ['Representante', 'Asesor', 'Ejecutivo'])
+    col_visita = buscar_columna(df_visitas, ['Cod. visita', 'Cod visita', 'Código visita', 'Codigo visita', 'Id visita', 'Visita'])
+    col_fecha = buscar_columna(df_visitas, ['Fecha visita', 'Fecha', 'Date'])
+    col_hora = buscar_columna(df_visitas, ['Hora digitado', 'Hora', 'Time'])
+    col_med = buscar_columna(df_visitas, ['Nombre farmacia o cliente', 'Farmacia', 'Médicos', 'Medicos', 'Cliente', 'Institución', 'Institucion', 'Nombre'])
+    col_obj = buscar_columna(df_visitas, ['Objetivo', 'Obj', 'Objetivos'])
+    col_com = buscar_columna(df_visitas, ['Comentario', 'Comentarios', 'Observación', 'Observacion'])
+    col_acomp = buscar_columna(df_visitas, ['Visita acompañada', 'Visita acompanada', 'Acompañada', 'Acompañamiento'])
+    col_muestra = buscar_columna(df_visitas, ['Material entregado', 'Muestra', 'Muestras'])
+    col_cant_muestra = buscar_columna(df_visitas, ['Cantidad de material', 'Cantidad', 'Cant'])
+    col_impacto_prod = buscar_columna(df_visitas, ['Impactos', 'Impacto', 'Producto'])
+
+    if not col_visita:
+        col_visita = df_visitas.columns[0]
+    if not col_rep:
+        col_rep = df_visitas.columns[0]
+    if not col_reg:
+        col_reg = df_visitas.columns[0]
+    if not col_com:
+        df_visitas['Comentario'] = '-'
+        col_com = 'Comentario'
+    if not col_obj:
+        df_visitas['Objetivo'] = '-'
+        col_obj = 'Objetivo'
+
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("3. Filtros en Cascada")
+    
+    regiones
