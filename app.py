@@ -288,6 +288,22 @@ col_med = buscar_columna(df_visitas, ['Nombre farmacia o cliente', 'Farmacia', '
 col_obj = buscar_columna(df_visitas, ['Objetivo', 'Obj', 'Objetivos'])
 col_com = buscar_columna(df_visitas, ['Comentario', 'Comentarios', 'Observación', 'Observacion'])
 
-if not col_visita: col_visita = df_visitas.columns[0]
-if not col_rep: col_rep = df_visitas.columns[0]
-if not col_reg:
+if not col_visita: 
+    col_visita = df_visitas.columns[0]
+if not col_rep: 
+    col_rep = df_visitas.columns[0]
+if not col_reg: 
+    df_visitas['Región_Default'] = 'Nacional'
+    col_reg = 'Región_Default'
+if not col_ciclo: 
+    df_visitas['Ciclo_Default'] = 'Ciclo Único'
+    col_ciclo = 'Ciclo_Default'
+if not col_lin: 
+    df_visitas['Linea_Default'] = 'General'
+    col_lin = 'Linea_Default'
+if not col_com: 
+    df_visitas['Comentario'] = '-'
+    col_com = 'Comentario'
+if not col_obj: 
+    df_visitas['Objetivo'] = '-'
+    col_obj = 'Objetivo'
