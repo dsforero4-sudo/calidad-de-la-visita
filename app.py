@@ -166,22 +166,38 @@ st.sidebar.subheader("2. Parámetros del Informe Gerencial")
 cliente_input = st.sidebar.text_input("Nombre del Cliente / Cuenta", value="Essity / Leukoacademy", key="input_cliente_rep")
 lineas_input = st.sidebar.text_input("Líneas / Segmento del Informe", value="Línea Institucional y Médica", key="input_lineas_rep")
 
-@st.cache_data
-def cargar_datos_hoja(source_bytes, hoja_nombre):
-    try:
-        df = pd.read_excel(io.BytesIO(source_bytes), sheet_name=hoja_nombre)
-        df.columns = df.columns.astype(str).str.strip()
-        return df
-    except Exception as e:
-        st.error(f"Error en cargar_datos_hoja: {e}")
-        return None
+# Carga de datos robusta utilizando el búfer nativo de Streamlit
+df_visitas = None
+df_impactos = None
 
-@st.cache_data
-def procesar_archivo_impactos(file_bytes):
-    if file_bytes is None: 
-        return None
+if uploaded_file is not None:
     try:
-        df_raw = pd.read_excel(io.BytesIO(file_bytes), sheet_name='Consulta', header=None)
+        uploaded_file.seek(0)
+        xls = pd.ExcelFile(uploaded_file)
+        hoja_seleccionada = st.sidebar.selectbox("Seleccione la Hoja de Visitas", options=xls.sheet_names, key="select_hoja_excel")
+        
+        uploaded_file.seek(0)
+        df_visitas = pd.read_excel(uploaded_file, sheet_name=hoja_seleccionada)
+        df_visitas.columns = df_visitas.columns.astype(str).str.strip()
+        st.sidebar.success(f"✅ Visitas cargadas ({len(df_visitas):,} registros)")
+    except Exception as e:
+        st.sidebar.error(f"Error al leer archivo de visitas: {e}")
+
+elif os.path.exists('listado_visitas_2026-09-07_11-44-08.xlsx'):
+    try:
+        default_path = 'listado_visitas_2026-09-07_11-44-08.xlsx'
+        xls = pd.ExcelFile(default_path)
+        hoja_seleccionada = st.sidebar.selectbox("Seleccione la Hoja de Visitas", options=xls.sheet_names, key="select_hoja_excel")
+        df_visitas = pd.read_excel(default_path, sheet_name=hoja_seleccionada)
+        df_visitas.columns = df_visitas.columns.astype(str).str.strip()
+        st.sidebar.success(f"✅ Visitas locales cargadas ({len(df_visitas):,} registros)")
+    except Exception as e:
+        st.sidebar.error(f"Error al leer archivo local: {e}")
+
+if uploaded_impactos is not None:
+    try:
+        uploaded_impactos.seek(0)
+        df_raw = pd.read_excel(uploaded_impactos, sheet_name='Consulta', header=None)
         row9 = df_raw.iloc[9].values
         row10 = df_raw.iloc[10].values
         
@@ -233,35 +249,44 @@ def procesar_archivo_impactos(file_bytes):
                         })
                     except: 
                         pass
-        return pd.DataFrame(records)
-    except Exception as e: 
-        st.error(f"Error procesando impactos: {e}")
-        return None
-
-df_visitas = None
-default_path = 'listado_visitas_2026-09-07_11-44-08.xlsx'
-
-source_bytes = None
-if uploaded_file is not None:
-    source_bytes = uploaded_file.getvalue()
-elif os.path.exists(default_path):
-    with open(default_path, "rb") as f:
-        source_bytes = f.read()
-
-if source_bytes is not None:
-    try:
-        xls = pd.ExcelFile(io.BytesIO(source_bytes))
-        hoja_seleccionada = st.sidebar.selectbox("Seleccione la Hoja de Visitas", options=xls.sheet_names, key="select_hoja_excel")
-        df_visitas = cargar_datos_hoja(source_bytes, hoja_seleccionada)
+        df_impactos = pd.DataFrame(records)
+        st.sidebar.success(f"✅ Impactos cargados ({len(df_impactos):,} registros)")
     except Exception as e:
-        st.sidebar.error(f"Error procesando archivo de visitas: {e}")
-        df_visitas = None
-
-df_impactos = procesar_archivo_impactos(uploaded_impactos.getvalue() if uploaded_impactos is not None else None)
+        st.sidebar.error(f"Error procesando impactos: {e}")
 
 if df_visitas is not None:
     def buscar_columna(df, posibles_nombres):
         cols_lower = {str(c).lower().strip(): c for c in df.columns}
         for p in posibles_nombres:
             if p.lower().strip() in cols_lower:
-                return cols_lower
+                return cols_lower[p.lower().strip()]
+        return None
+
+    col_reg = buscar_columna(df_visitas, ['Región', 'Region', 'Coordinación', 'Coordinacion', 'Distrito', 'Zona'])
+    col_ciclo = buscar_columna(df_visitas, ['Ciclo', 'Periodo', 'Mes'])
+    col_lin = buscar_columna(df_visitas, ['Línea', 'Linea', 'Estrategia'])
+    col_rep = buscar_columna(df_visitas, ['Representante', 'Asesor', 'Ejecutivo'])
+    col_visita = buscar_columna(df_visitas, ['Cod. visita', 'Cod visita', 'Código visita', 'Codigo visita', 'Id visita', 'Visita'])
+    col_fecha = buscar_columna(df_visitas, ['Fecha visita', 'Fecha', 'Date'])
+    col_hora = buscar_columna(df_visitas, ['Hora digitado', 'Hora', 'Time'])
+    col_med = buscar_columna(df_visitas, ['Nombre farmacia o cliente', 'Farmacia', 'Médicos', 'Medicos', 'Cliente', 'Institución', 'Institucion', 'Nombre'])
+    col_obj = buscar_columna(df_visitas, ['Objetivo', 'Obj', 'Objetivos'])
+    col_com = buscar_columna(df_visitas, ['Comentario', 'Comentarios', 'Observación', 'Observacion'])
+    col_acomp = buscar_columna(df_visitas, ['Visita acompañada', 'Visita acompanada', 'Acompañada', 'Acompañamiento'])
+    col_muestra = buscar_columna(df_visitas, ['Material entregado', 'Muestra', 'Muestras'])
+    col_cant_muestra = buscar_columna(df_visitas, ['Cantidad de material', 'Cantidad', 'Cant'])
+    col_impacto_prod = buscar_columna(df_visitas, ['Impactos', 'Impacto', 'Producto'])
+
+    if not col_visita:
+        col_visita = df_visitas.columns[0]
+    if not col_rep:
+        col_rep = df_visitas.columns[0]
+    if not col_reg:
+        df_visitas['Región_Default'] = 'Nacional'
+        col_reg = 'Región_Default'
+    if not col_ciclo:
+        df_visitas['Ciclo_Default'] = 'Ciclo Único'
+        col_ciclo = 'Ciclo_Default'
+    if not col_lin:
+        df_visitas['Linea_Default'] = 'General'
+        col_lin = 'Linea_
