@@ -202,4 +202,4 @@ if uploaded_impactos is not None:
         
         specialties = []
         curr_spec = "GENERAL"
-        for val in row
+        for val in row9:
