@@ -703,7 +703,7 @@ if col_impacto and col_impacto in df_visitas.columns:
 
         df_actitud_eval = df_act_filtered.drop_duplicates(subset=[col_visita]).copy() if col_visita in df_act_filtered.columns else df_act_filtered.copy()
         
-        # Normalizar y renombrar vacíos/guiones como "Sin sondeo"
+        # Normalizar vacíos/guiones como "Sin sondeo"
         df_actitud_eval['Comentario_Clean'] = df_actitud_eval[col_impacto].fillna('Sin sondeo').astype(str).str.strip()
         df_actitud_eval['Comentario_Clean'] = df_actitud_eval['Comentario_Clean'].replace(['-', '', 'nan', 'none', 'NaN', 'NAN'], 'Sin sondeo')
         
