@@ -193,10 +193,12 @@ elif os.path.exists('listado_visitas_2026-09-07_11-44-08.xlsx'):
     except Exception as e:
         st.sidebar.error(f"Error al leer archivo local: {e}")
 
-if uploaded_impactos is not None:
+@st.cache_data
+def procesar_archivo_impactos(file_bytes):
+    if file_bytes is None: 
+        return None
     try:
-        uploaded_impactos.seek(0)
-        df_raw = pd.read_excel(uploaded_impactos, sheet_name='Consulta', header=None)
+        df_raw = pd.read_excel(io.BytesIO(file_bytes), sheet_name='Consulta', header=None)
         row9 = df_raw.iloc[9].values
         row10 = df_raw.iloc[10].values
         
@@ -206,3 +208,49 @@ if uploaded_impactos is not None:
             if pd.notna(val) and str(val).strip() != '': 
                 curr_spec = str(val).strip()
             specialties.append(curr_spec)
+            
+        records = []
+        current_region = "DESCONOCIDA"
+        
+        for idx in range(11, len(df_raw)):
+            col0 = df_raw.iloc[idx, 0]
+            col1 = df_raw.iloc[idx, 1]
+            if pd.isna(col0) or pd.isna(col1): 
+                continue
+            col0_str = str(col0).strip()
+            
+            if col0_str.lower().startswith("region") or col0_str.lower().startswith("región"):
+                current_region = col0_str.replace("Región", "").replace("Region", "").strip()
+                continue
+            if col0_str.startswith("DISTRITO"): 
+                continue
+            
+            rep_text = col0_str
+            producto = str(col1).strip()
+            coordinacion = "COORDINACION CL" if "CL" in current_region.upper() or "CL" in rep_text.upper() or "ANTIOQUIA" in rep_text.upper() or "COSTA" in rep_text.upper() or "SANTANDER" in rep_text.upper() else "COORDINACION PS"
+            
+            for c_idx in range(2, len(row10), 3):
+                if c_idx >= df_raw.shape[1]: 
+                    break
+                spec = specialties[c_idx]
+                imp_esp = df_raw.iloc[idx, c_idx]
+                imp_real = df_raw.iloc[idx, c_idx + 1]
+                
+                if pd.notna(imp_esp) and str(imp_esp).strip() != '-' and str(imp_esp).strip() != '':
+                    try:
+                        esp_val = float(imp_esp)
+                        real_val = float(imp_real) if pd.notna(imp_real) and str(imp_real).strip() != '-' else 0.0
+                        records.append({
+                            'Región': coordinacion, 
+                            'Representante_Raw': rep_text, 
+                            'Producto': producto, 
+                            'Especialidad': spec, 
+                            'Imp_Esp': esp_val, 
+                            'Imp_Real': real_val
+                        })
+                    except: 
+                        pass
+        return pd.DataFrame(records)
+    except Exception as e: 
+        st.error(f"Error procesando impactos: {e}")
+        return None
