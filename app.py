@@ -634,18 +634,15 @@ col_impacto = buscar_columna(df_visitas, ['Comentario de Impacto', 'Comentario i
 col_prod_visita = buscar_columna(df_visitas, ['Impactos', 'Producto', 'Producto promocionado', 'Marca'])
 
 if col_impacto and col_impacto in df_visitas.columns:
-    
-    # --- PARTE 1: Filtro de Producto y Torta Interactiva ---
     col_f_prod, col_g_chart = st.columns([1, 2.5])
     
     with col_f_prod:
         st.markdown("##### 🔍 Filtrar por Producto")
         if col_prod_visita and col_prod_visita in df_visitas.columns:
-            productos_disp = sorted([str(p).strip() for p in df_visitas[col_prod_visita].dropna().unique() if str(p).strip() != '' and str(p).strip() != '-'])
+            productos_disp = sorted([str(p).strip() for p in df_visitas[col_prod_visita].dropna().unique() if str(p).strip() not in ['', '-']])
             selected_producto = st.selectbox("Seleccione Producto", options=["Todos los Productos"] + productos_disp, key="select_prod_actitud")
         else:
             selected_producto = "Todos los Productos"
-            st.info("La columna 'Impactos' no está disponible en el listado de visitas.")
 
     with col_g_chart:
         df_act_filtered = df_visitas.copy()
@@ -653,8 +650,6 @@ if col_impacto and col_impacto in df_visitas.columns:
             df_act_filtered = df_act_filtered[df_act_filtered[col_prod_visita].astype(str).str.strip() == selected_producto]
 
         df_actitud_eval = df_act_filtered.drop_duplicates(subset=[col_visita]).copy() if col_visita in df_visitas.columns else df_act_filtered.copy()
-        
-        # Normalizar vacíos/guiones como "Sin sondeo"
         df_actitud_eval['Comentario_Clean'] = df_actitud_eval[col_impacto].fillna('Sin sondeo').astype(str).str.strip()
         df_actitud_eval['Comentario_Clean'] = df_actitud_eval['Comentario_Clean'].replace(['-', '', 'nan', 'none', 'NaN', 'NAN'], 'Sin sondeo')
         
@@ -667,28 +662,15 @@ if col_impacto and col_impacto in df_visitas.columns:
             otros_sum = df_act_counts.iloc[top_n:]['Total'].sum()
             df_act_counts = pd.concat([df_top, pd.DataFrame([{'Comentario_Impacto': 'Otros / Varios', 'Total': otros_sum}])], ignore_index=True)
 
-        fig_pie_actitud = px.pie(
-            df_act_counts, 
-            names='Comentario_Impacto', 
-            values='Total', 
-            hole=0.4, 
-            template='plotly_dark',
-            title=f"<b>Actitud del Médico ({selected_producto})</b>"
-        )
+        fig_pie_actitud = px.pie(df_act_counts, names='Comentario_Impacto', values='Total', hole=0.4, template='plotly_dark', title=f"<b>Actitud del Médico ({selected_producto})</b>")
         fig_pie_actitud.update_traces(textposition='inside', textinfo='percent+label')
-        fig_pie_actitud.update_layout(
-            paper_bgcolor='rgba(0,0,0,0)', 
-            plot_bgcolor='rgba(0,0,0,0)', 
-            height=450, 
-            font=dict(color='white')
-        )
+        fig_pie_actitud.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=450, font=dict(color='white'))
         st.plotly_chart(fig_pie_actitud, use_container_width=True)
 
     st.markdown("---")
 
-    # --- PARTE 2: Gráfica de Barras Horizontales Apiladas al 100% por Producto ---
     st.markdown("### 📊 Distribución Porcentual de Actitud por Producto")
-    st.markdown("<span style='color: #B7BCC9;'>Comparativa 100% apilada de la receptividad médica frente a cada producto promocionado.</span>", unsafe_allow_html=True)
+    st.markdown("<span style='color: #B7BCC9;'>Comparativa 100% apilada ordenada por Impactos Esperados.</span>", unsafe_allow_html=True)
 
     if col_prod_visita and col_prod_visita in df_visitas.columns:
         df_bar_data = df_visitas.copy()
@@ -701,8 +683,32 @@ if col_impacto and col_impacto in df_visitas.columns:
         df_pivot = pd.crosstab(df_bar_data[col_prod_visita], df_bar_data['Comentario_Clean'], normalize='index') * 100
         df_pivot = df_pivot.reset_index()
 
-        fig_stack_100 = go.Figure()
+        # Obtener los impactos esperados por producto desde el archivo de impactos para ordenar
+        expected_order = []
+        path_imp = uploaded_impactos if uploaded_impactos is not None else ('Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx' if os.path.exists('Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx') else None)
         
+        if path_imp is not None:
+            try:
+                if hasattr(path_imp, 'seek'): path_imp.seek(0)
+                df_imp_raw = pd.read_excel(path_imp, header=None)
+                esp_cols = [2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35, 38]
+                prod_esp = {}
+                for r in range(11, len(df_imp_raw)):
+                    prod = df_imp_raw.iloc[r, 1]
+                    if pd.isna(prod): continue
+                    prod = str(prod).strip()
+                    if prod in ['', '-']: continue
+                    esp_sum = sum(float(df_imp_raw.iloc[r, c]) for c in esp_cols if pd.notna(df_imp_raw.iloc[r, c]) and df_imp_raw.iloc[r, c] != '-')
+                    if esp_sum > 0: prod_esp[prod] = prod_esp.get(prod, 0) + esp_sum
+                
+                # Ordenar productos según los esperados de menor a mayor para que Plotly los apile de arriba a abajo correctamente
+                sorted_prods = sorted(prod_esp.keys(), key=lambda x: prod_esp[x])
+                df_pivot['order'] = df_pivot[col_prod_visita].map(lambda x: sorted_prods.index(x) if x in sorted_prods else 999)
+                df_pivot = df_pivot.sort_values(by='order').drop(columns=['order'])
+            except:
+                pass
+
+        fig_stack_100 = go.Figure()
         for col_name in df_pivot.columns:
             if col_name != col_prod_visita:
                 fig_stack_100.add_trace(go.Bar(
@@ -721,13 +727,12 @@ if col_impacto and col_impacto in df_visitas.columns:
             plot_bgcolor='rgba(0,0,0,0)',
             height=500,
             xaxis=dict(title="Porcentaje (%)", range=[0, 100]),
-            yaxis=dict(title="Producto"),
+            yaxis=dict(title="Producto", categoryorder='array', categoryarray=df_pivot[col_prod_visita].tolist()),
             font=dict(color='white'),
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
         )
         st.plotly_chart(fig_stack_100, use_container_width=True)
     else:
         st.info("No se encontró la columna de productos para generar la gráfica apilada.")
-
 else:
     st.warning("⚠️ No se encontró la columna 'Comentario de Impacto' en el archivo de visitas cargado.")
