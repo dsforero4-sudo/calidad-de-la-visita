@@ -299,12 +299,7 @@ if df_visitas is not None:
     
     representantes = sorted(df_filtered[col_rep].dropna().unique()) if col_rep else []
     
-    selected_reps = st.sidebar.multiselect(
-        "Representante",
-        options=representantes,
-        default=representantes,
-        key="filtro_rep"
-    )
+    selected_reps = st.sidebar.multiselect("Representante", options=representantes, default=representantes, key="filtro_rep")
     
     df_filtered = df_filtered[df_filtered[col_rep].isin(selected_reps)] if col_rep and selected_reps else df_filtered
     
@@ -324,4 +319,9 @@ if df_visitas is not None:
     # ==========================================
     # SECCIÓN 1: ESTABLECIMIENTO DE OBJETIVOS (MARCO SMART & TÉCNICA DE VENTAS)
     # ==========================================
-    st.subheader("1. Estable
+    st.subheader("1. Establecimiento de Objetivos (Marco SMART & Técnica de Ventas)")
+    st.markdown("<span style='color: #B7BCC9;'>Evaluación rigurosa de los objetivos ingresados en bitácora bajo los 5 pilares SMART y su diferenciación de actividades logísticas.</span>", unsafe_allow_html=True)
+    st.markdown("---")
+
+    df_obj_eval = df_unique.copy()
+    df_obj_eval['Obj_Text'] = df_obj_eval[col_obj].fillna('').
