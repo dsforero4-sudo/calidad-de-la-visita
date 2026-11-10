@@ -160,6 +160,7 @@ st.markdown(
 st.sidebar.subheader("1. Carga de Reportes")
 uploaded_file = st.sidebar.file_uploader("Cargar Listado de Visitas (.xlsx)", type=["xlsx"], key="visitas_validador")
 uploaded_impactos = st.sidebar.file_uploader("Cargar Impactos Promocionales (.xlsx)", type=["xlsx"], key="impactos_validador")
+uploaded_av = st.sidebar.file_uploader("Cargar Ayudas Visuales (.xlsx)", type=["xlsx"], key="av_validador")
 
 # Botón de ejecución explícito para garantizar renderizado inmediato
 btn_generar = st.sidebar.button("🚀 Generar / Actualizar Auditoría", use_container_width=True)
