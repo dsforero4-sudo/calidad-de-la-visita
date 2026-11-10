@@ -412,3 +412,34 @@ fig_bar_copia = px.bar(
 fig_bar_copia.update_traces(texttemplate='%{text}%', textposition='outside', textfont_size=11)
 fig_bar_copia.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=max(450, len(rep_copia)*25), font=dict(color='white'))
 st.plotly_chart(fig_bar_copia, use_container_width=True)
+
+# ==========================================
+# SECCIÓN 2: PRESENTACIÓN DE BENEFICIOS
+# ==========================================
+st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
+st.subheader("2. Presentación de Beneficios (Impactos y Ayudas Visuales)")
+st.markdown("<span style='color: #B7BCC9;'>Análisis de la argumentación clínica, cumplimiento de impactos promocionales y el uso del material de apoyo.</span>", unsafe_allow_html=True)
+st.markdown("---")
+
+if df_impactos is not None:
+    df_imp_filtrado = df_impactos[df_impactos['Región'].isin(selected_regiones)].copy() if 'Región' in df_impactos.columns else df_impactos
+    df_imp_agrupado = df_imp_filtrado.groupby('Producto', as_index=False)[['Imp_Esp', 'Imp_Real']].sum()
+
+    if len(df_imp_agrupado) > 0:
+        df_imp_agrupado['Imp_Esp'] = df_imp_agrupado['Imp_Esp'].round(0).astype(int)
+        df_imp_agrupado['Imp_Real'] = df_imp_agrupado['Imp_Real'].round(0).astype(int)
+        df_imp_agrupado['Pct_Cumplimiento'] = (df_imp_agrupado['Imp_Real'] / df_imp_agrupado['Imp_Esp'] * 100).fillna(0).round(1)
+        df_imp_agrupado['Imp_Pendiente'] = (df_imp_agrupado['Imp_Esp'] - df_imp_agrupado['Imp_Real']).apply(lambda x: max(0, x))
+        df_imp_agrupado = df_imp_agrupado.sort_values(by=['Imp_Esp', 'Pct_Cumplimiento'], ascending=[True, True]).tail(10)
+        df_imp_agrupado['Texto_Real'] = df_imp_agrupado['Imp_Real'].astype(str) + " (" + df_imp_agrupado['Pct_Cumplimiento'].astype(str) + "%)"
+        df_imp_agrupado['Texto_Total'] = df_imp_agrupado['Imp_Esp'].astype(str)
+
+        fig_impactos = go.Figure()
+        fig_impactos.add_trace(go.Bar(y=df_imp_agrupado['Producto'], x=df_imp_agrupado['Imp_Real'], name='Realizados', orientation='h', marker=dict(color='#3DD6FF'), text=df_imp_agrupado['Texto_Real'], textposition='inside'))
+        fig_impactos.add_trace(go.Bar(y=df_imp_agrupado['Producto'], x=df_imp_agrupado['Imp_Pendiente'], name='Brecha Pendiente', orientation='h', marker=dict(color='#FF2D8F'), text=df_imp_agrupado['Texto_Total'], textposition='outside'))
+        fig_impactos.update_layout(template='plotly_dark', title="Top Impactos Promocionales: Realizados vs Esperados", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=450, barmode='stack', xaxis_title="Impactos Esperados", yaxis_title="Producto", font=dict(color='white'))
+        st.plotly_chart(fig_impactos, use_container_width=True)
+    else:
+        st.info("No hay registros de impactos bajo los filtros seleccionados.")
+else:
+    st.info("💡 Sugerencia: Puedes cargar el archivo de Impactos Promocionales en la barra lateral para habilitar este análisis de beneficios.")
