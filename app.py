@@ -266,4 +266,33 @@ if df_visitas is not None:
     col_cant_muestra = buscar_columna(df_visitas, ['Cantidad de material', 'Cantidad', 'Cant'])
     col_impacto_prod = buscar_columna(df_visitas, ['Impactos', 'Impacto', 'Producto'])
 
-    if not col_vis
+    if not col_visita:
+        col_visita = df_visitas.columns[0]
+    if not col_rep:
+        col_rep = df_visitas.columns[0]
+    if not col_reg:
+        col_reg = df_visitas.columns[0]
+    if not col_com:
+        df_visitas['Comentario'] = '-'
+        col_com = 'Comentario'
+    if not col_obj:
+        df_visitas['Objetivo'] = '-'
+        col_obj = 'Objetivo'
+
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("3. Filtros en Cascada")
+    
+    regiones = sorted(df_visitas[col_reg].dropna().unique()) if col_reg else []
+    selected_regiones = st.sidebar.multiselect("Región / Coordinación", options=regiones, default=regiones, key="filtro_reg")
+    df_f1 = df_visitas[df_visitas[col_reg].isin(selected_regiones)] if col_reg and selected_regiones else df_visitas
+    
+    ciclos = sorted(df_f1[col_ciclo].dropna().unique()) if col_ciclo else []
+    selected_ciclos = st.sidebar.multiselect("Ciclo", options=ciclos, default=ciclos, key="filtro_ciclo")
+    df_f2 = df_f1[df_f1[col_ciclo].isin(selected_ciclos)] if ciclos and selected_ciclos else df_f1
+    
+    lineas = sorted(df_f2[col_lin].dropna().unique()) if col_lin else []
+    selected_lineas = st.sidebar.multiselect("Línea Estratégica", options=lineas, default=lineas, key="filtro_lin")
+    df_filtered = df_f2[df_f2[col_lin].isin(selected_lineas)] if col_lin and selected_lineas else df_f2
+    
+    representantes = sorted(df_filtered[col_rep].dropna().unique()) if col_rep else []
+    selected_reps = st.sidebar.multiselect("Representante", options=representantes, default=representantes, key
