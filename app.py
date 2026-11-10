@@ -161,11 +161,6 @@ st.sidebar.subheader("1. Carga de Reportes")
 uploaded_file = st.sidebar.file_uploader("Cargar Listado de Visitas (.xlsx)", type=["xlsx"], key="visitas_validador")
 uploaded_impactos = st.sidebar.file_uploader("Cargar Impactos Promocionales (.xlsx)", type=["xlsx"], key="impactos_validador")
 
-st.sidebar.markdown("---")
-st.sidebar.subheader("2. Parámetros del Informe Gerencial")
-cliente_input = st.sidebar.text_input("Nombre del Cliente / Cuenta", value="Essity / Leukoacademy", key="input_cliente_rep")
-lineas_input = st.sidebar.text_input("Líneas / Segmento del Informe", value="Línea Institucional y Médica", key="input_lineas_rep")
-
 # Botón de ejecución explícito para garantizar renderizado inmediato
 btn_generar = st.sidebar.button("🚀 Generar / Actualizar Auditoría", use_container_width=True)
 
