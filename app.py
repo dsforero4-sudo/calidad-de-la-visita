@@ -461,7 +461,7 @@ with col_b4:
 st.markdown("---")
 
 # Gráfico de Torta: Distribución de Impactos Promocionales por Producto
-st.markdown("### 🥧 Distribución de Impactos Promocionales por Producto")
+st.markdown("### 2.1 Distribución de Impactos Promocionales por Producto")
 st.markdown("<span style='color: #B7BCC9;'>Participación porcentual de las marcas y productos promocionados en el campo.</span>", unsafe_allow_html=True)
 
 # Consolidación real de impactos por producto desde el archivo cargado o local
@@ -518,7 +518,7 @@ else:
     st.info("💡 Carga el archivo de Impactos Promocionales en la barra lateral para visualizar la distribución por producto.")
 
 # Gráfico de Barras Horizontales Apiladas: Impactos Realizados vs Esperados
-st.markdown("### Top Impactos Promocionales: Realizados vs Esperados")
+st.markdown("### 2.2 Impactos Promocionales: Realizados vs Esperados")
 st.markdown("<span style='color: #B7BCC9;'>Comparativa consolidada entre los impactos esperados y ejecutados por producto.</span>", unsafe_allow_html=True)
 
 if uploaded_impactos is not None or os.path.exists('Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx'):
