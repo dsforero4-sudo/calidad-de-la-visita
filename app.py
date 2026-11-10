@@ -631,64 +631,16 @@ st.markdown("<span style='color: #B7BCC9;'>Evaluación cualitativa de la recepti
 st.markdown("---")
 
 col_impacto = buscar_columna(df_visitas, ['Comentario de Impacto', 'Comentario impacto', 'Comentario', 'Impacto'])
-
-if col_impacto and col_impacto in df_visitas.columns:
-    st.markdown(f"**Distribución de Actitud Médica según Comentario de Impacto**")
-    
-    # Limpieza de datos únicos por visita
-    df_actitud_eval = df_visitas.drop_duplicates(subset=[col_visita]).copy() if col_visita in df_visitas.columns else df_visitas.copy()
-    df_actitud_eval['Comentario_Clean'] = df_actitud_eval[col_impacto].fillna('Sin Comentario').astype(str).str.strip()
-    
-    # Agrupación de frecuencias
-    df_act_counts = df_actitud_eval['Comentario_Clean'].value_counts().reset_index()
-    df_act_counts.columns = ['Comentario_Impacto', 'Total']
-    
-    # Si hay muchas categorías de texto libre, agrupamos las menores en 'Otros / Varios' para mantener la torta limpia
-    if len(df_act_counts) > 7:
-        top_n = 6
-        df_top = df_act_counts.head(top_n)
-        otros_sum = df_act_counts.iloc[top_n:]['Total'].sum()
-        df_act_counts = pd.concat([df_top, pd.DataFrame([{'Comentario_Impacto': 'Otros / Varios', 'Total': otros_sum}])], ignore_index=True)
-
-    fig_pie_actitud = px.pie(
-        df_act_counts, 
-        names='Comentario_Impacto', 
-        values='Total', 
-        hole=0.4, 
-        template='plotly_dark',
-        title="<b>Actitud del Médico frente al Portafolio (Comentario de Impacto)</b>"
-    )
-    fig_pie_actitud.update_traces(textposition='inside', textinfo='percent+label')
-    fig_pie_actitud.update_layout(
-        paper_bgcolor='rgba(0,0,0,0)', 
-        plot_bgcolor='rgba(0,0,0,0)', 
-        height=450, 
-        font=dict(color='white')
-    )
-    st.plotly_chart(fig_pie_actitud, use_container_width=True)
-else:
-    st.warning("⚠️ No se encontró la columna 'Comentario de Impacto' en el archivo de visitas cargado. Verifique el nombre exacto de la columna.")
-
-# ==========================================
-# SECCIÓN 3: ACTITUD FRENTE AL PORTAFOLIO
-# ==========================================
-st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
-st.subheader("3. Actitud frente al Portafolio")
-st.markdown("<span style='color: #B7BCC9;'>Evaluación cualitativa de la receptividad y actitud del profesional médico basada en el Comentario de Impacto.</span>", unsafe_allow_html=True)
-st.markdown("---")
-
-col_impacto = buscar_columna(df_visitas, ['Comentario de Impacto', 'Comentario impacto', 'Comentario', 'Impacto'])
 col_prod_visita = buscar_columna(df_visitas, ['Impactos', 'Producto', 'Producto promocionado', 'Marca'])
 
 if col_impacto and col_impacto in df_visitas.columns:
     
-    # Diseño en dos columnas: Filtro de Producto a la izquierda, Gráfica interactiva a la derecha
+    # Único contenedor con dos columnas: Filtro a la izquierda, Gráfica interactiva a la derecha
     col_f_prod, col_g_chart = st.columns([1, 2.5])
     
     with col_f_prod:
         st.markdown("##### 🔍 Filtrar por Producto")
         if col_prod_visita and col_prod_visita in df_visitas.columns:
-            # Extraer y limpiar productos únicos de la columna "Impactos"
             productos_disp = sorted([str(p).strip() for p in df_visitas[col_prod_visita].dropna().unique() if str(p).strip() != '' and str(p).strip() != '-'])
             selected_producto = st.selectbox("Seleccione Producto", options=["Todos los Productos"] + productos_disp, key="select_prod_actitud")
         else:
@@ -696,12 +648,11 @@ if col_impacto and col_impacto in df_visitas.columns:
             st.info("La columna 'Impactos' no está disponible en el listado de visitas.")
 
     with col_g_chart:
-        # Filtrar DataFrame según la selección del producto en la columna "Impactos"
         df_act_filtered = df_visitas.copy()
         if selected_producto != "Todos los Productos" and col_prod_visita and col_prod_visita in df_act_filtered.columns:
             df_act_filtered = df_act_filtered[df_act_filtered[col_prod_visita].astype(str).str.strip() == selected_producto]
 
-        df_actitud_eval = df_act_filtered.drop_duplicates(subset=[col_visita]).copy() if col_visita in df_act_filtered.columns else df_act_filtered.copy()
+        df_actitud_eval = df_act_filtered.drop_duplicates(subset=[col_visita]).copy() if col_visita in df_visitas.columns else df_act_filtered.copy()
         
         # Normalizar vacíos/guiones como "Sin sondeo"
         df_actitud_eval['Comentario_Clean'] = df_actitud_eval[col_impacto].fillna('Sin sondeo').astype(str).str.strip()
