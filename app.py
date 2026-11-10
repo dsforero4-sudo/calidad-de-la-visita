@@ -165,7 +165,7 @@ def cargar_datos_hoja(source_bytes, hoja_nombre):
         df = pd.read_excel(io.BytesIO(source_bytes), sheet_name=hoja_nombre)
         df.columns = df.columns.astype(str).str.strip()
         return df
-    except Exception as e:
+    except Exception:
         return None
 
 @st.cache_data
@@ -226,13 +226,12 @@ def procesar_archivo_impactos(file_bytes):
                     except: 
                         pass
         return pd.DataFrame(records)
-    except Exception as e: 
+    except Exception: 
         return None
 
 df_visitas = None
 default_path = 'listado_visitas_2026-09-07_11-44-08.xlsx'
 
-# Determinar origen del archivo de visitas (subido o local por defecto)
 source_bytes = None
 if uploaded_file is not None:
     source_bytes = uploaded_file.getvalue()
@@ -320,74 +319,4 @@ if df_visitas is not None:
         com = row['Comentario_Clean']
         if com in ['', 'nan', 'none', '-']: 
             return False
-        return row['Rep_Comentario_Count'] > 1
-
-    df_unique['Es_Repetido'] = df_unique.apply(check_repetido_individual, axis=1)
-
-    # ==========================================
-    # SECCIÓN 1: ESTABLECIMIENTO DE OBJETIVOS (MARCO SMART & TÉCNICA DE VENTAS)
-    # ==========================================
-    st.subheader("1. Establecimiento de Objetivos (Marco SMART & Técnica de Ventas)")
-    st.markdown("<span style='color: #B7BCC9;'>Evaluación rigurosa de los objetivos ingresados en bitácora bajo los 5 pilares SMART y su diferenciación de actividades logísticas.</span>", unsafe_allow_html=True)
-    st.markdown("---")
-
-    df_obj_eval = df_unique.copy()
-    df_obj_eval['Obj_Text'] = df_obj_eval[col_obj].fillna('').astype(str).str.strip()
-    
-    palabras_prohibidas_obj = ['', '-', 'nan', 'none', 'nat', '0', 'ok', 'bien']
-    palabras_actividades = ['entregar', 'visitar', 'saludar', 'llamar', 'dejar', 'muestra', 'material', 'obsequio']
-
-    def evaluar_smart_detallado(txt):
-        t_low = txt.lower()
-        if t_low in palabras_prohibidas_obj or len(txt) < 8:
-            return 0, "No Definido / Vacío", "El objetivo no contiene información válida."
-        
-        puntos = 0
-        detalles = []
-        
-        if any(w in t_low for w in ['producto', 'estudio', 'portafolio', 'tratamiento', 'dosis', 'pacientes', 'protocolo', 'receta', 'prescrip']):
-            puntos += 1
-            detalles.append("S(+)")
-        else:
-            detalles.append("S(-)")
-            
-        if any(w in t_low for w in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'aumentar', 'incrementar', 'reducir', 'veces', 'pacientes', 'semanales', 'mensuales']):
-            puntos += 1
-            detalles.append("M(+)")
-        else:
-            detalles.append("M(-)")
-            
-        if not any(t_low.startswith(act) for act in palabras_actividades):
-            puntos += 1
-            detalles.append("A(+)")
-        else:
-            detalles.append("A(-) [Confunde Actividad Logística]")
-            
-        if any(w in t_low for w in ['iniciar', 'reiniciar', 'aumentar', 'sostener', 'mantener', 'reemplazar', 'posicionar', 'evaluar', 'prescripción', 'uso', 'guía', 'institucional']):
-            puntos += 1
-            detalles.append("R(+)")
-        else:
-            detalles.append("R(-)")
-            
-        if any(w in t_low for w in ['próxima visita', 'proxima visita', 'mes', 'trimestre', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre', 'fecha', 'próximo']):
-            puntos += 1
-            detalles.append("T(+)")
-        else:
-            detalles.append("T(-)")
-
-        if puntos <= 2:
-            nivel = "0-2 Puntos: Bajo / No Definido"
-        elif puntos <= 4:
-            nivel = "3-4 Puntos: Aceptable"
-        else:
-            nivel = "5 Puntos: Excelente (SMART)"
-            
-        return puntos, nivel, ", ".join(detalles)
-
-    res_smart = df_obj_eval['Obj_Text'].apply(evaluar_smart_detallado)
-    df_obj_eval['Smart_Puntaje'] = [r[0] for r in res_smart]
-    df_obj_eval['Smart_Nivel'] = [r[1] for r in res_smart]
-    df_obj_eval['Smart_Detalle'] = [r[2] for r in res_smart]
-
-    total_obj_eval = len(df_obj_eval)
-    excelente_smart =
+        return row['Rep_
