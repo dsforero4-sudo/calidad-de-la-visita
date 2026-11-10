@@ -635,7 +635,7 @@ col_prod_visita = buscar_columna(df_visitas, ['Impactos', 'Producto', 'Producto 
 
 if col_impacto and col_impacto in df_visitas.columns:
     
-    # Único contenedor con dos columnas: Filtro a la izquierda, Gráfica interactiva a la derecha
+    # --- PARTE 1: Filtro de Producto y Torta Interactiva ---
     col_f_prod, col_g_chart = st.columns([1, 2.5])
     
     with col_f_prod:
@@ -683,10 +683,10 @@ if col_impacto and col_impacto in df_visitas.columns:
             font=dict(color='white')
         )
         st.plotly_chart(fig_pie_actitud, use_container_width=True)
-else:
-    st.warning("⚠️ No se encontró la columna 'Comentario de Impacto' en el archivo de visitas cargado.")
 
-# --- PARTE 2: Gráfica de Barras Horizontales Apiladas al 100% por Producto ---
+    st.markdown("---")
+
+    # --- PARTE 2: Gráfica de Barras Horizontales Apiladas al 100% por Producto ---
     st.markdown("### 📊 Distribución Porcentual de Actitud por Producto")
     st.markdown("<span style='color: #B7BCC9;'>Comparativa 100% apilada de la receptividad médica frente a cada producto promocionado.</span>", unsafe_allow_html=True)
 
