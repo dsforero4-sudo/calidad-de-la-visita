@@ -627,37 +627,36 @@ else:
 # ==========================================
 st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
 st.subheader("3. Actitud frente al Portafolio")
-st.markdown("<span style='color: #B7BCC9;'>Evaluación cualitativa de la receptividad y actitud del profesional médico durante la visita.</span>", unsafe_allow_html=True)
+st.markdown("<span style='color: #B7BCC9;'>Evaluación cualitativa de la receptividad y actitud del profesional médico basada en el Comentario de Impacto.</span>", unsafe_allow_html=True)
 st.markdown("---")
 
-# Búsqueda automática de la columna que contenga la actitud, comentario o receptividad
-col_actitud = buscar_columna(df_visitas, ['Actitud', 'Receptividad', 'Respuesta', 'Comentario', 'Observación', 'Observacion', 'Calificación'])
+col_impacto = buscar_columna(df_visitas, ['Comentario de Impacto', 'Comentario impacto', 'Comentario', 'Impacto'])
 
-if col_actitud and col_actitud in df_visitas.columns:
-    st.markdown(f"**Distribución de Actitud Médica** (Basado en columna: `{col_actitud}`)")
+if col_impacto and col_impacto in df_visitas.columns:
+    st.markdown(f"**Distribución de Actitud Médica según Comentario de Impacto**")
     
-    # Limpieza y categorización de los comentarios/actitudes
+    # Limpieza de datos únicos por visita
     df_actitud_eval = df_visitas.drop_duplicates(subset=[col_visita]).copy() if col_visita in df_visitas.columns else df_visitas.copy()
-    df_actitud_eval['Actitud_Clean'] = df_actitud_eval[col_actitud].fillna('No Registrada').astype(str).str.strip()
+    df_actitud_eval['Comentario_Clean'] = df_actitud_eval[col_impacto].fillna('Sin Comentario').astype(str).str.strip()
     
     # Agrupación de frecuencias
-    df_act_counts = df_actitud_eval['Actitud_Clean'].value_counts().reset_index()
-    df_act_counts.columns = ['Actitud', 'Total']
+    df_act_counts = df_actitud_eval['Comentario_Clean'].value_counts().reset_index()
+    df_act_counts.columns = ['Comentario_Impacto', 'Total']
     
-    # Si hay demasiadas respuestas de texto libre muy largas, agrupamos las menores o mostramos las principales
-    if len(df_act_counts) > 8:
-        top_n = 7
+    # Si hay muchas categorías de texto libre, agrupamos las menores en 'Otros / Varios' para mantener la torta limpia
+    if len(df_act_counts) > 7:
+        top_n = 6
         df_top = df_act_counts.head(top_n)
         otros_sum = df_act_counts.iloc[top_n:]['Total'].sum()
-        df_act_counts = pd.concat([df_top, pd.DataFrame([{'Actitud': 'Otros / Varios', 'Total': otros_sum}])], ignore_index=True)
+        df_act_counts = pd.concat([df_top, pd.DataFrame([{'Comentario_Impacto': 'Otros / Varios', 'Total': otros_sum}])], ignore_index=True)
 
     fig_pie_actitud = px.pie(
         df_act_counts, 
-        names='Actitud', 
+        names='Comentario_Impacto', 
         values='Total', 
         hole=0.4, 
         template='plotly_dark',
-        title="<b>Actitud del Médico frente a la Presentación</b>"
+        title="<b>Actitud del Médico frente al Portafolio (Comentario de Impacto)</b>"
     )
     fig_pie_actitud.update_traces(textposition='inside', textinfo='percent+label')
     fig_pie_actitud.update_layout(
@@ -668,19 +667,4 @@ if col_actitud and col_actitud in df_visitas.columns:
     )
     st.plotly_chart(fig_pie_actitud, use_container_width=True)
 else:
-    st.info("💡 No se detectó una columna específica de 'Actitud' o 'Receptividad' en el archivo de visitas. Verificando con los comentarios generales...")
-    
-    # Respaldo usando comentarios o notas si la columna exacta no existe
-    if col_com and col_com in df_visitas.columns:
-        df_visitas['Comentario_Clean'] = df_visitas[col_com].fillna('Sin Comentario').astype(str).str.strip()
-        com_counts = df_visitas['Comentario_Clean'].value_counts().head(6).reset_index()
-        com_counts.columns = ['Comentario', 'Total']
-        
-        fig_pie_com = px.pie(
-            com_counts, names='Comentario', values='Total', 
-            hole=0.4, template='plotly_dark',
-            title="<b>Distribución de Observaciones en Visita</b>"
-        )
-        fig_pie_com.update_traces(textposition='inside', textinfo='percent+label')
-        fig_pie_com.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=450, font=dict(color='white'))
-        st.plotly_chart(fig_pie_com, use_container_width=True)
+    st.warning("⚠️ No se encontró la columna 'Comentario de Impacto' en el archivo de visitas cargado. Verifique el nombre exacto de la columna.")
