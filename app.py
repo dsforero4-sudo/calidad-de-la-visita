@@ -165,7 +165,7 @@ def cargar_datos_hoja(source, hoja_nombre):
         df = pd.read_excel(source, sheet_name=hoja_nombre)
         df.columns = df.columns.astype(str).str.strip()
         return df
-    except Exception as e:
+    except Exception:
         return None
 
 @st.cache_data
@@ -173,3 +173,276 @@ def procesar_archivo_impactos(file):
     if file is None: 
         return None
     try:
+        df_raw = pd.read_excel(file, sheet_name='Consulta', header=None)
+        row9 = df_raw.iloc[9].values
+        row10 = df_raw.iloc[10].values
+        
+        specialties = []
+        curr_spec = "GENERAL"
+        for val in row9:
+            if pd.notna(val) and str(val).strip() != '': 
+                curr_spec = str(val).strip()
+            specialties.append(curr_spec)
+            
+        records = []
+        current_region = "DESCONOCIDA"
+        
+        for idx in range(11, len(df_raw)):
+            col0 = df_raw.iloc[idx, 0]
+            col1 = df_raw.iloc[idx, 1]
+            if pd.isna(col0) or pd.isna(col1): 
+                continue
+            col0_str = str(col0).strip()
+            
+            if col0_str.lower().startswith("region") or col0_str.lower().startswith("región"):
+                current_region = col0_str.replace("Región", "").replace("Region", "").strip()
+                continue
+            if col0_str.startswith("DISTRITO"): 
+                continue
+            
+            rep_text = col0_str
+            producto = str(col1).strip()
+            coordinacion = "COORDINACION CL" if "CL" in current_region.upper() or "CL" in rep_text.upper() or "ANTIOQUIA" in rep_text.upper() or "COSTA" in rep_text.upper() or "SANTANDER" in rep_text.upper() else "COORDINACION PS"
+            
+            for c_idx in range(2, len(row10), 3):
+                if c_idx >= df_raw.shape[1]: 
+                    break
+                spec = specialties[c_idx]
+                imp_esp = df_raw.iloc[idx, c_idx]
+                imp_real = df_raw.iloc[idx, c_idx + 1]
+                
+                if pd.notna(imp_esp) and str(imp_esp).strip() != '-' and str(imp_esp).strip() != '':
+                    try:
+                        esp_val = float(imp_esp)
+                        real_val = float(imp_real) if pd.notna(imp_real) and str(imp_real).strip() != '-' else 0.0
+                        records.append({
+                            'Región': coordinacion, 
+                            'Representante_Raw': rep_text, 
+                            'Producto': producto, 
+                            'Especialidad': spec, 
+                            'Imp_Esp': esp_val, 
+                            'Imp_Real': real_val
+                        })
+                    except: 
+                        pass
+        return pd.DataFrame(records)
+    except Exception: 
+        return None
+
+df_visitas = None
+default_path = 'listado_visitas_2026-09-07_11-44-08.xlsx'
+source_file = uploaded_file if uploaded_file is not None else (default_path if os.path.exists(default_path) else None)
+
+if source_file is not None:
+    try:
+        xls = pd.ExcelFile(source_file)
+        hoja_seleccionada = st.sidebar.selectbox("Seleccione la Hoja de Visitas", options=xls.sheet_names, key="select_hoja_excel")
+        df_visitas = cargar_datos_hoja(source_file, hoja_seleccionada)
+    except Exception:
+        df_visitas = None
+
+df_impactos = procesar_archivo_impactos(uploaded_impactos)
+
+if df_visitas is not None:
+    def buscar_columna(df, posibles_nombres):
+        cols_lower = {c.lower().strip(): c for c in df.columns}
+        for p in posibles_nombres:
+            if p.lower().strip() in cols_lower:
+                return cols_lower[p.lower().strip()]
+        return None
+
+    col_reg = buscar_columna(df_visitas, ['Región', 'Region', 'Coordinación', 'Coordinacion'])
+    col_ciclo = buscar_columna(df_visitas, ['Ciclo', 'Periodo', 'Mes'])
+    col_lin = buscar_columna(df_visitas, ['Línea', 'Linea', 'Estrategia'])
+    col_rep = buscar_columna(df_visitas, ['Representante', 'Asesor', 'Ejecutivo'])
+    col_visita = buscar_columna(df_visitas, ['Cod. visita', 'Cod visita', 'Código visita', 'Codigo visita', 'Id visita', 'Visita'])
+    col_fecha = buscar_columna(df_visitas, ['Fecha visita', 'Fecha', 'Date'])
+    col_hora = buscar_columna(df_visitas, ['Hora digitado', 'Hora', 'Time'])
+    col_med = buscar_columna(df_visitas, ['Nombre farmacia o cliente', 'Farmacia', 'Médicos', 'Medicos', 'Cliente', 'Institución', 'Institucion', 'Nombre'])
+    col_obj = buscar_columna(df_visitas, ['Objetivo', 'Obj', 'Objetivos'])
+    col_com = buscar_columna(df_visitas, ['Comentario', 'Comentarios', 'Observación', 'Observacion'])
+    col_acomp = buscar_columna(df_visitas, ['Visita acompañada', 'Visita acompanada', 'Acompañada', 'Acompañamiento'])
+    col_muestra = buscar_columna(df_visitas, ['Material entregado', 'Muestra', 'Muestras'])
+    col_cant_muestra = buscar_columna(df_visitas, ['Cantidad de material', 'Cantidad', 'Cant'])
+    col_impacto_prod = buscar_columna(df_visitas, ['Impactos', 'Impacto', 'Producto'])
+
+    if not col_visita: 
+        col_visita = df_visitas.columns[0]
+    if not col_rep: 
+        col_rep = df_visitas.columns[0]
+    if not col_reg: 
+        col_reg = df_visitas.columns[0]
+    if not col_com: 
+        df_visitas['Comentario'] = '-'
+        col_com = 'Comentario'
+    if not col_obj: 
+        df_visitas['Objetivo'] = '-'
+        col_obj = 'Objetivo'
+
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("3. Filtros en Cascada")
+    
+    regiones = sorted(df_visitas[col_reg].dropna().unique()) if col_reg else []
+    selected_regiones = st.sidebar.multiselect("Región / Coordinación", options=regiones, default=regiones, key="filtro_reg")
+    df_f1 = df_visitas[df_visitas[col_reg].isin(selected_regiones)] if col_reg and selected_regiones else df_visitas
+    
+    ciclos = sorted(df_f1[col_ciclo].dropna().unique()) if col_ciclo else []
+    selected_ciclos = st.sidebar.multiselect("Ciclo", options=ciclos, default=ciclos, key="filtro_ciclo")
+    df_f2 = df_f1[df_f1[col_ciclo].isin(selected_ciclos)] if ciclos and selected_ciclos else df_f1
+    
+    lineas = sorted(df_f2[col_lin].dropna().unique()) if col_lin else []
+    selected_lineas = st.sidebar.multiselect("Línea Estratégica", options=lineas, default=lineas, key="filtro_lin")
+    df_filtered = df_f2[df_f2[col_lin].isin(selected_lineas)] if col_lin and selected_lineas else df_f2
+    
+    representantes = sorted(df_filtered[col_rep].dropna().unique()) if col_rep else []
+    selected_reps = st.sidebar.multiselect("Representante", options=representantes, default=representantes, key="filtro_rep")
+    df_filtered = df_filtered[df_filtered[col_rep].isin(selected_reps)] if col_rep and selected_reps else df_filtered
+    
+    df_unique = df_filtered.drop_duplicates(subset=[col_visita]).copy()
+    
+    df_unique['Comentario_Clean'] = df_unique[col_com].fillna('').astype(str).str.strip().str.lower()
+    df_unique['Rep_Comentario_Count'] = df_unique.groupby([col_rep, 'Comentario_Clean'])[col_visita].transform('count')
+    
+    def check_repetido_individual(row):
+        com = row['Comentario_Clean']
+        if com in ['', 'nan', 'none', '-']: 
+            return False
+        return row['Rep_Comentario_Count'] > 1
+
+    df_unique['Es_Repetido'] = df_unique.apply(check_repetido_individual, axis=1)
+
+    # ==========================================
+    # SECCIÓN 1: ESTABLECIMIENTO DE OBJETIVOS (MARCO SMART & TÉCNICA DE VENTAS)
+    # ==========================================
+    st.subheader("1. Establecimiento de Objetivos (Marco SMART & Técnica de Ventas)")
+    st.markdown("<span style='color: #B7BCC9;'>Evaluación rigurosa de los objetivos ingresados en bitácora bajo los 5 pilares SMART (Específico, Medible, Alcanzable/Realista, Relevante y con Tiempo) y su diferenciación de actividades logísticas.</span>", unsafe_allow_html=True)
+    st.markdown("---")
+
+    df_obj_eval = df_unique.copy()
+    df_obj_eval['Obj_Text'] = df_obj_eval[col_obj].fillna('').astype(str).str.strip()
+    
+    palabras_prohibidas_obj = ['', '-', 'nan', 'none', 'nat', '0', 'ok', 'bien']
+    palabras_actividades = ['entregar', 'visitar', 'saludar', 'llamar', 'dejar', 'muestra', 'material', 'obsequio']
+
+    def evaluar_smart_detallado(txt):
+        t_low = txt.lower()
+        if t_low in palabras_prohibidas_obj or len(txt) < 8:
+            return 0, "No Definido / Vacío", "El objetivo no contiene información válida."
+        
+        puntos = 0
+        detalles = []
+        
+        # 1. Específico (S)
+        if any(w in t_low for w in ['producto', 'estudio', 'portafolio', 'tratamiento', 'dosis', 'pacientes', 'protocolo', 'receta', 'prescrip']):
+            puntos += 1
+            detalles.append("S(+)")
+        else:
+            detalles.append("S(-)")
+            
+        # 2. Medible (M)
+        if any(w in t_low for w in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'aumentar', 'incrementar', 'reducir', 'veces', 'pacientes', 'semanales', 'mensuales']):
+            puntos += 1
+            detalles.append("M(+)")
+        else:
+            detalles.append("M(-)")
+            
+        # 3. Alcanzable / Realista (A)
+        if not any(t_low.startswith(act) for act in palabras_actividades):
+            puntos += 1
+            detalles.append("A(+)")
+        else:
+            detalles.append("A(-) [Confunde Actividad Logística]")
+            
+        # 4. Relevante (R)
+        if any(w in t_low for w in ['iniciar', 'reiniciar', 'aumentar', 'sostener', 'mantener', 'reemplazar', 'posicionar', 'evaluar', 'prescripción', 'uso', 'guía', 'institucional']):
+            puntos += 1
+            detalles.append("R(+)")
+        else:
+            detalles.append("R(-)")
+            
+        # 5. Con tiempo / Plazo (T)
+        if any(w in t_low for w in ['próxima visita', 'proxima visita', 'mes', 'trimestre', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre', 'fecha', 'próximo']):
+            puntos += 1
+            detalles.append("T(+)")
+        else:
+            detalles.append("T(-)")
+
+        if puntos <= 2:
+            nivel = "0-2 Puntos: Bajo / No Definido"
+        elif puntos <= 4:
+            nivel = "3-4 Puntos: Aceptable"
+        else:
+            nivel = "5 Puntos: Excelente (SMART)"
+            
+        return puntos, nivel, ", ".join(detalles)
+
+    res_smart = df_obj_eval['Obj_Text'].apply(evaluar_smart_detallado)
+    df_obj_eval['Smart_Puntaje'] = [r[0] for r in res_smart]
+    df_obj_eval['Smart_Nivel'] = [r[1] for r in res_smart]
+    df_obj_eval['Smart_Detalle'] = [r[2] for r in res_smart]
+
+    total_obj_eval = len(df_obj_eval)
+    excelente_smart = len(df_obj_eval[df_obj_eval['Smart_Puntaje'] == 5])
+    aceptable_smart = len(df_obj_eval[df_obj_eval['Smart_Puntaje'].isin([3, 4])])
+    bajo_smart = len(df_obj_eval[df_obj_eval['Smart_Puntaje'] <= 2])
+
+    om1, om2, om3 = st.columns(3)
+    om1.metric("Visitas Evaluadas (Objetivos)", f"{total_obj_eval:,}")
+    om2.metric("Objetivos Excelentes (SMART)", f"{excelente_smart:,}", f"{(excelente_smart/total_obj_eval*100 if total_obj_eval>0 else 0):.1f}%")
+    om3.metric("Objetivos Bajo / No Definidos", f"{bajo_smart:,}", f"{(bajo_smart/total_obj_eval*100 if total_obj_eval>0 else 0):.1f}%", delta_color="inverse")
+    st.markdown("---")
+
+    # Gráfica de Torta Global (Pie Chart) para Niveles SMART con los filtros aplicados
+    df_smart_counts = df_obj_eval['Smart_Nivel'].value_counts().reset_index()
+    df_smart_counts.columns = ['Smart_Nivel', 'Total']
+
+    color_map_smart = {
+        '5 Puntos: Excelente (SMART)': '#2ECC71', 
+        '3-4 Puntos: Aceptable': '#3DD6FF', 
+        '0-2 Puntos: Bajo / No Definido': '#FF2D8F',
+        'No Definido / Vacío': '#B7BCC9'
+    }
+
+    fig_smart_pie = px.pie(
+        df_smart_counts, names='Smart_Nivel', values='Total', 
+        hole=0.5, template='plotly_dark', 
+        title="<b>Distribución Global de Niveles SMART en Objetivos</b>", 
+        color='Smart_Nivel', color_discrete_map=color_map_smart
+    )
+    fig_smart_pie.update_traces(textinfo='percent+value', textposition='inside', insidetextorientation='horizontal', textfont_size=13)
+    fig_smart_pie.update_layout(
+        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=450, 
+        legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5), 
+        margin=dict(t=50, b=80, l=20, r=20), font=dict(color='white')
+    )
+    st.plotly_chart(fig_smart_pie, use_container_width=True)
+
+    with st.expander("🔍 Ver detalle de objetivos evaluados bajo criterios SMART"):
+        cols_v_obj = [c for c in [col_rep, col_visita, col_fecha, col_med, col_obj, 'Smart_Nivel', 'Smart_Detalle'] if c is not None]
+        st.dataframe(df_obj_eval[cols_v_obj].head(50), use_container_width=True, hide_index=True)
+
+    st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
+
+    # ==========================================
+    # SECCIÓN 2: PRESENTACIÓN DE BENEFICIOS (IMPACTOS PROMOCIONALES Y AYUDAS VISUALES)
+    # ==========================================
+    st.subheader("2. Presentación de Beneficios (Impactos y Ayudas Visuales)")
+    st.markdown("<span style='color: #B7BCC9;'>Análisis de la argumentación clínica, cumplimiento de impactos promocionales y el uso del material de apoyo.</span>", unsafe_allow_html=True)
+    st.markdown("---")
+
+    if df_impactos is not None:
+        df_imp_filtrado = df_impactos[df_impactos['Región'].isin(selected_regiones)].copy() if 'Región' in df_impactos.columns else df_impactos
+        df_imp_agrupado = df_imp_filtrado.groupby('Producto', as_index=False)[['Imp_Esp', 'Imp_Real']].sum()
+
+        if len(df_imp_agrupado) > 0:
+            df_imp_agrupado['Imp_Esp'] = df_imp_agrupado['Imp_Esp'].round(0).astype(int)
+            df_imp_agrupado['Imp_Real'] = df_imp_agrupado['Imp_Real'].round(0).astype(int)
+            df_imp_agrupado['Pct_Cumplimiento'] = (df_imp_agrupado['Imp_Real'] / df_imp_agrupado['Imp_Esp'] * 100).fillna(0).round(1)
+            df_imp_agrupado['Imp_Pendiente'] = (df_imp_agrupado['Imp_Esp'] - df_imp_agrupado['Imp_Real']).apply(lambda x: max(0, x))
+            df_imp_agrupado = df_imp_agrupado.sort_values(by=['Imp_Esp', 'Pct_Cumplimiento'], ascending=[True, True]).tail(10)
+            df_imp_agrupado['Texto_Real'] = df_imp_agrupado['Imp_Real'].astype(str) + " (" + df_imp_agrupado['Pct_Cumplimiento'].astype(str) + "%)"
+            df_imp_agrupado['Texto_Total'] = df_imp_agrupado['Imp_Esp'].astype(str)
+
+            fig_impactos = go.Figure()
+            fig_impactos.add_trace(go.Bar(y=df_imp_agrupado['Producto'], x=df_imp_agrupado['Imp_Real'], name='Realizados', orientation='h', marker=dict(color='#3DD6FF'), text=df_imp_agrupado['Texto_Real'], textposition='inside'))
+            fig_impactos.add_trace(go.Bar(y=df_imp_agrupado['Producto'], x=df_imp_agrupado['Imp_Pendiente'], name='Brecha Pendiente', orientation='h', marker=dict(color='#FF2D8F'), text=df_imp_agrupado['Texto_Total'], textposition='outside'))
