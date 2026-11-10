@@ -156,4 +156,20 @@ uploaded_impactos = st.sidebar.file_uploader("Cargar Impactos Promocionales (.xl
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("2. Parámetros del Informe Gerencial")
-cliente_input = st.sidebar.text_input("Nombre del Cliente / Cuenta", value="Essity / Leukoacademy", key="input_cliente_rep
+cliente_input = st.sidebar.text_input("Nombre del Cliente / Cuenta", value="Essity / Leukoacademy", key="input_cliente_rep")
+lineas_input = st.sidebar.text_input("Líneas / Segmento del Informe", value="Línea Institucional y Médica", key="input_lineas_rep")
+
+@st.cache_data
+def cargar_datos_hoja(source, hoja_nombre):
+    try:
+        df = pd.read_excel(source, sheet_name=hoja_nombre)
+        df.columns = df.columns.astype(str).str.strip()
+        return df
+    except Exception as e:
+        return None
+
+@st.cache_data
+def procesar_archivo_impactos(file):
+    if file is None: 
+        return None
+    try:
