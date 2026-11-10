@@ -166,7 +166,7 @@ st.sidebar.subheader("2. Parámetros del Informe Gerencial")
 cliente_input = st.sidebar.text_input("Nombre del Cliente / Cuenta", value="Essity / Leukoacademy", key="input_cliente_rep")
 lineas_input = st.sidebar.text_input("Líneas / Segmento del Informe", value="Línea Institucional y Médica", key="input_lineas_rep")
 
-# Carga segura de datos
+# Carga segura de datos con manejo robusto de excepciones
 df_visitas = None
 df_impactos = None
 
@@ -189,4 +189,4 @@ elif os.path.exists('listado_visitas_2026-09-07_11-44-08.xlsx'):
         xls = pd.ExcelFile(default_path)
         hoja_seleccionada = st.sidebar.selectbox("Seleccione la Hoja de Visitas", options=xls.sheet_names, key="select_hoja_excel")
         df_visitas = pd.read_excel(default_path, sheet_name=hoja_seleccionada)
-        df_visitas.columns = df_visitas.columns.astype(str).str.strip()
+        df_visitas.columns = df_visitas.columns.astype(str
