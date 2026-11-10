@@ -538,3 +538,86 @@ with col_t2:
             st.error(f"Error en torta de ayudas visuales: {e}")
     else:
         st.info("Carga el archivo de Ayudas Visuales en la barra lateral.")
+
+# ==========================================
+# GRÁFICO DE BARRAS HORIZONTALES (ÚLTIMA POSICIÓN)
+# ==========================================
+st.markdown("### Top Impactos Promocionales: Realizados vs Esperados")
+st.markdown("<span style='color: #B7BCC9;'>Comparativa consolidada entre los impactos esperados y ejecutados por producto.</span>", unsafe_allow_html=True)
+
+if uploaded_impactos is not None or os.path.exists('Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx'):
+    try:
+        path_imp = uploaded_impactos if uploaded_impactos is not None else 'Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx'
+        df_imp_raw = pd.read_excel(path_imp, header=None)
+        
+        esp_cols = [2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35, 38]
+        real_cols = [3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36, 39]
+        
+        product_data = {}
+        for r in range(11, len(df_imp_raw)):
+            prod = df_imp_raw.iloc[r, 1]
+            if pd.isna(prod): continue
+            prod = str(prod).strip()
+            if prod == '' or prod == '-': continue
+                
+            esp_sum = 0
+            real_sum = 0
+            for c_esp, c_real in zip(esp_cols, real_cols):
+                val_esp = df_imp_raw.iloc[r, c_esp]
+                val_real = df_imp_raw.iloc[r, c_real]
+                
+                if pd.notna(val_esp) and val_esp != '-':
+                    try: esp_sum += float(val_esp)
+                    except: pass
+                if pd.notna(val_real) and val_real != '-':
+                    try: real_sum += float(val_real)
+                    except: pass
+                    
+            if esp_sum > 0 or real_sum > 0:
+                if prod not in product_data:
+                    product_data[prod] = {'Esp': 0, 'Real': 0}
+                product_data[prod]['Esp'] += esp_sum
+                product_data[prod]['Real'] += real_sum
+                
+        df_bar = pd.DataFrame.from_dict(product_data, orient='index').reset_index()
+        df_bar.columns = ['Producto', 'Esperados', 'Real']
+        df_bar['Brecha'] = df_bar['Esperados'] - df_bar['Real']
+        df_bar['Brecha'] = df_bar['Brecha'].apply(lambda x: max(0, x))
+        df_bar['Pct'] = (df_bar['Real'] / df_bar['Esperados'] * 100).fillna(0).round(1)
+        
+        df_bar = df_bar.sort_values(by='Esperados', ascending=True)
+        
+        df_bar['Texto_Real'] = df_bar['Real'].astype(int).astype(str) + " (" + df_bar['Pct'].astype(str) + "%)"
+        df_bar['Texto_Total'] = df_bar['Esperados'].astype(int).astype(str)
+        
+        fig_bar_imp = go.Figure()
+        
+        fig_bar_imp.add_trace(go.Bar(
+            y=df_bar['Producto'], x=df_bar['Real'], name='Realizados', 
+            orientation='h', marker=dict(color='#3DD6FF'), 
+            text=df_bar['Texto_Real'], textposition='inside'
+        ))
+        
+        fig_bar_imp.add_trace(go.Bar(
+            y=df_bar['Producto'], x=df_bar['Brecha'], name='Brecha Pendiente', 
+            orientation='h', marker=dict(color='#FF2D8F'), 
+            text=df_bar['Texto_Total'], textposition='outside'
+        ))
+        
+        fig_bar_imp.update_layout(
+            template='plotly_dark',
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            height=500,
+            barmode='stack',
+            xaxis_title="Impactos Esperados",
+            yaxis_title="Producto",
+            font=dict(color='white'),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        )
+        st.plotly_chart(fig_bar_imp, use_container_width=True)
+        
+    except Exception as e:
+        st.error(f"Error al procesar el gráfico de impactos: {e}")
+else:
+    st.info("💡 Carga el archivo de Impactos Promocionales en la barra lateral para ver esta comparativa.")
