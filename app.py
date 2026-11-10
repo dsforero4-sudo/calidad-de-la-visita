@@ -166,7 +166,10 @@ st.sidebar.subheader("2. Parámetros del Informe Gerencial")
 cliente_input = st.sidebar.text_input("Nombre del Cliente / Cuenta", value="Essity / Leukoacademy", key="input_cliente_rep")
 lineas_input = st.sidebar.text_input("Líneas / Segmento del Informe", value="Línea Institucional y Médica", key="input_lineas_rep")
 
-# Carga segura de datos con manejo robusto de excepciones
+# Botón de ejecución explícito para garantizar renderizado inmediato
+btn_generar = st.sidebar.button("🚀 Generar / Actualizar Auditoría", use_container_width=True)
+
+# Carga de datos
 df_visitas = None
 df_impactos = None
 
@@ -194,81 +197,22 @@ elif os.path.exists('listado_visitas_2026-09-07_11-44-08.xlsx'):
     except Exception as e:
         st.sidebar.error(f"Error al leer archivo local: {e}")
 
-if uploaded_impactos is not None:
-    try:
-        uploaded_impactos.seek(0)
-        df_raw = pd.read_excel(uploaded_impactos, sheet_name='Consulta', header=None)
-        row9 = df_raw.iloc[9].values
-        row10 = df_raw.iloc[10].values
-        
-        specialties = []
-        curr_spec = "GENERAL"
-        for val in row9:
-            if pd.notna(val) and str(val).strip() != '': 
-                curr_spec = str(val).strip()
-            specialties.append(curr_spec)
-            
-        records = []
-        current_region = "DESCONOCIDA"
-        
-        for idx in range(11, len(df_raw)):
-            col0 = df_raw.iloc[idx, 0]
-            col1 = df_raw.iloc[idx, 1]
-            if pd.isna(col0) or pd.isna(col1): 
-                continue
-            col0_str = str(col0).strip()
-            
-            if col0_str.lower().startswith("region") or col0_str.lower().startswith("región"):
-                current_region = col0_str.replace("Región", "").replace("Region", "").strip()
-                continue
-            if col0_str.startswith("DISTRITO"): 
-                continue
-            
-            rep_text = col0_str
-            producto = str(col1).strip()
-            coordinacion = "COORDINACION CL" if "CL" in current_region.upper() or "CL" in rep_text.upper() or "ANTIOQUIA" in rep_text.upper() or "COSTA" in rep_text.upper() or "SANTANDER" in rep_text.upper() else "COORDINACION PS"
-            
-            for c_idx in range(2, len(row10), 3):
-                if c_idx >= df_raw.shape[1]: 
-                    break
-                spec = specialties[c_idx]
-                imp_esp = df_raw.iloc[idx, c_idx]
-                imp_real = df_raw.iloc[idx, c_idx + 1]
-                
-                if pd.notna(imp_esp) and str(imp_esp).strip() != '-' and str(imp_esp).strip() != '':
-                    try:
-                        esp_val = float(imp_esp)
-                        real_val = float(imp_real) if pd.notna(imp_real) and str(imp_real).strip() != '-' else 0.0
-                        records.append({
-                            'Región': coordinacion, 
-                            'Representante_Raw': rep_text, 
-                            'Producto': producto, 
-                            'Especialidad': spec, 
-                            'Imp_Esp': esp_val, 
-                            'Imp_Real': real_val
-                        })
-                    except: 
-                        pass
-        df_impactos = pd.DataFrame(records)
-        st.sidebar.success(f"Impactos cargados ({len(df_impactos):,} registros)")
-    except Exception as e:
-        st.sidebar.error(f"Error procesando impactos: {e}")
-
+# Si no hay archivo cargado ni local, usamos dummy automáticamente para que la app luzca completa
 if df_visitas is None:
     data_dummy = {
-        'Cod. visita': [1, 2],
-        'Representante': ['Representante A', 'Representante B'],
-        'Región': ['Nacional', 'Nacional'],
-        'Ciclo': ['Ciclo 1', 'Ciclo 1'],
-        'Línea': ['General', 'General'],
-        'Fecha': ['2026-09-01', '2026-09-02'],
-        'Hora': ['09:00:00', '20:30:00'],
-        'Cliente': ['Dr. Juan Pérez', 'Dra. María Gómez'],
-        'Objetivo': ['Entregar material y saludar', 'Visitar médico'],
-        'Comentario': ['Excelente receptividad al producto.', 'Excelente receptividad al producto.']
+        'Cod. visita': [1, 2, 3, 4],
+        'Representante': ['Representante A', 'Representante A', 'Representante B', 'Representante B'],
+        'Región': ['Nacional', 'Nacional', 'Nacional', 'Nacional'],
+        'Ciclo': ['Ciclo 1', 'Ciclo 1', 'Ciclo 1', 'Ciclo 1'],
+        'Línea': ['General', 'General', 'General', 'General'],
+        'Fecha': ['2026-09-01', '2026-09-02', '2026-09-03', '2026-09-04'],
+        'Hora': ['09:00:00', '20:30:00', '10:00:00', '22:00:00'],
+        'Cliente': ['Dr. Juan Pérez', 'Dra. María Gómez', 'Dr. Carlos Ruiz', 'Dra. Ana Torres'],
+        'Objetivo': ['Entregar material y saludar', 'Aumentar prescripción del producto en pacientes de riesgo durante el mes', 'Visitar médico', 'Posicionar el portafolio en la institución el próximo trimestre'],
+        'Comentario': ['Excelente receptividad al producto.', 'Excelente receptividad al producto.', 'Sin novedad.', 'Sin novedad.']
     }
     df_visitas = pd.DataFrame(data_dummy)
-    st.sidebar.info("ℹ️ Usando datos de respaldo predeterminados. Carga tu archivo Excel arriba para ver tus datos reales.")
+    st.sidebar.info("ℹ️ Usando datos de respaldo demostrativos.")
 
 def buscar_columna(df, posibles_nombres):
     cols_lower = {str(c).lower().strip(): c for c in df.columns}
@@ -288,10 +232,8 @@ col_med = buscar_columna(df_visitas, ['Nombre farmacia o cliente', 'Farmacia', '
 col_obj = buscar_columna(df_visitas, ['Objetivo', 'Obj', 'Objetivos'])
 col_com = buscar_columna(df_visitas, ['Comentario', 'Comentarios', 'Observación', 'Observacion'])
 
-if not col_visita: 
-    col_visita = df_visitas.columns[0]
-if not col_rep: 
-    col_rep = df_visitas.columns[0]
+if not col_visita: col_visita = df_visitas.columns[0]
+if not col_rep: col_rep = df_visitas.columns[0]
 if not col_reg: 
     df_visitas['Región_Default'] = 'Nacional'
     col_reg = 'Región_Default'
@@ -307,3 +249,217 @@ if not col_com:
 if not col_obj: 
     df_visitas['Objetivo'] = '-'
     col_obj = 'Objetivo'
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("3. Filtros en Cascada")
+
+regiones = sorted(df_visitas[col_reg].dropna().unique()) if col_reg else []
+selected_regiones = st.sidebar.multiselect("Región / Coordinación", options=regiones, default=regiones, key="filtro_reg")
+
+df_f1 = df_visitas[df_visitas[col_reg].isin(selected_regiones)] if col_reg and selected_regiones else df_visitas
+
+ciclos = sorted(df_f1[col_ciclo].dropna().unique()) if col_ciclo else []
+selected_ciclos = st.sidebar.multiselect("Ciclo", options=ciclos, default=ciclos, key="filtro_ciclo")
+
+df_f2 = df_f1[df_f1[col_ciclo].isin(selected_ciclos)] if ciclos and selected_ciclos else df_f1
+
+lineas = sorted(df_f2[col_lin].dropna().unique()) if col_lin else []
+selected_lineas = st.sidebar.multiselect("Línea Estratégica", options=lineas, default=lineas, key="filtro_lin")
+
+df_filtered = df_f2[df_f2[col_lin].isin(selected_lineas)] if col_lin and selected_lineas else df_f2
+
+representantes = sorted(df_filtered[col_rep].dropna().unique()) if col_rep else []
+selected_reps = st.sidebar.multiselect("Representante", options=representantes, default=representantes, key="filtro_rep")
+
+df_filtered = df_filtered[df_filtered[col_rep].isin(selected_reps)] if col_rep and selected_reps else df_filtered
+df_unique = df_filtered.drop_duplicates(subset=[col_visita]).copy()
+
+# ==========================================
+# SECCIÓN 1: ESTABLECIMIENTO DE OBJETIVOS
+# ==========================================
+st.subheader("1. Establecimiento de Objetivos (Marco SMART & Técnica de Ventas)")
+st.markdown("<span style='color: #B7BCC9;'>Evaluación rigurosa de los objetivos ingresados en bitácora bajo los 5 pilares SMART.</span>", unsafe_allow_html=True)
+st.markdown("---")
+
+df_obj_eval = df_unique.copy()
+df_obj_eval['Obj_Text'] = df_obj_eval[col_obj].fillna('').astype(str).str.strip()
+
+palabras_prohibidas_obj = ['', '-', 'nan', 'none', 'nat', '0', 'ok', 'bien']
+palabras_actividades = ['entregar', 'visitar', 'saludar', 'llamar', 'dejar', 'muestra', 'material', 'obsequio']
+
+def evaluar_smart_detallado(txt):
+    t_low = txt.lower()
+    if t_low in palabras_prohibidas_obj or len(txt) < 8:
+        return 0, "No Definido / Vacío", "El objetivo no contiene información válida."
+    
+    puntos = 0
+    detalles = []
+    
+    if any(w in t_low for w in ['producto', 'estudio', 'portafolio', 'tratamiento', 'dosis', 'pacientes', 'protocolo', 'receta', 'prescrip']):
+        puntos += 1
+        detalles.append("S(+)")
+    else:
+        detalles.append("S(-)")
+        
+    if any(w in t_low for w in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'aumentar', 'incrementar', 'reducir', 'veces', 'pacientes', 'semanales', 'mensuales']):
+        puntos += 1
+        detalles.append("M(+)")
+    else:
+        detalles.append("M(-)")
+        
+    if not any(t_low.startswith(act) for act in palabras_actividades):
+        puntos += 1
+        detalles.append("A(+)")
+    else:
+        detalles.append("A(-) [Confunde Actividad Logística]")
+        
+    if any(w in t_low for w in ['iniciar', 'reiniciar', 'aumentar', 'sostener', 'mantener', 'reemplazar', 'posicionar', 'evaluar', 'prescripción', 'uso', 'guía', 'institucional']):
+        puntos += 1
+        detalles.append("R(+)")
+    else:
+        detalles.append("R(-)")
+        
+    if any(w in t_low for w in ['próxima visita', 'proxima visita', 'mes', 'trimestre', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre', 'fecha', 'próximo']):
+        puntos += 1
+        detalles.append("T(+)")
+    else:
+        detalles.append("T(-)")
+
+    if puntos <= 2:
+        nivel = "0-2 Puntos: Bajo / No Definido"
+    elif puntos <= 4:
+        nivel = "3-4 Puntos: Aceptable"
+    else:
+        nivel = "5 Puntos: Excelente (SMART)"
+        
+    return puntos, nivel, ", ".join(detalles)
+
+res_smart = df_obj_eval['Obj_Text'].apply(evaluar_smart_detallado)
+df_obj_eval['Smart_Puntaje'] = [r[0] for r in res_smart]
+df_obj_eval['Smart_Nivel'] = [r[1] for r in res_smart]
+df_obj_eval['Smart_Detalle'] = [r[2] for r in res_smart]
+
+total_obj_eval = len(df_obj_eval)
+excelente_smart = len(df_obj_eval[df_obj_eval['Smart_Puntaje'] == 5])
+bajo_smart = len(df_obj_eval[df_obj_eval['Smart_Puntaje'] <= 2])
+
+om1, om2, om3 = st.columns(3)
+om1.metric("Visitas Evaluadas (Objetivos)", f"{total_obj_eval:,}")
+om2.metric("Objetivos Excelentes (SMART)", f"{excelente_smart:,}", f"{(excelente_smart/total_obj_eval*100 if total_obj_eval>0 else 0):.1f}%")
+om3.metric("Objetivos Bajo / No Definidos", f"{bajo_smart:,}", f"{(bajo_smart/total_obj_eval*100 if total_obj_eval>0 else 0):.1f}%", delta_color="inverse")
+st.markdown("---")
+
+df_smart_counts = df_obj_eval['Smart_Nivel'].value_counts().reset_index()
+df_smart_counts.columns = ['Smart_Nivel', 'Total']
+
+color_map_smart = {
+    '5 Puntos: Excelente (SMART)': '#2ECC71', 
+    '3-4 Puntos: Aceptable': '#3DD6FF', 
+    '0-2 Puntos: Bajo / No Definido': '#FF2D8F',
+    'No Definido / Vacío': '#B7BCC9'
+}
+
+fig_smart_pie = px.pie(
+    df_smart_counts, names='Smart_Nivel', values='Total', 
+    hole=0.5, template='plotly_dark', 
+    title="<b>Distribución Global de Niveles SMART en Objetivos</b>", 
+    color='Smart_Nivel', color_discrete_map=color_map_smart
+)
+fig_smart_pie.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=450, font=dict(color='white'))
+st.plotly_chart(fig_smart_pie, use_container_width=True)
+
+# ==========================================
+# SECCIÓN 4: MANEJO DE LA ACTITUD Y CIERRE (COPY-PASTE EN OBJETIVOS)
+# ==========================================
+st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
+st.subheader("4. Manejo de la Actitud, Propuesta y Cierre")
+st.markdown("<span style='color: #B7BCC9;'>Control de autorrepetición de objetivos (Copy-Paste).</span>", unsafe_allow_html=True)
+st.markdown("---")
+
+df_unique['Obj_Clean'] = df_unique[col_obj].fillna('').astype(str).str.strip().str.lower()
+df_unique['Rep_Obj_Count'] = df_unique.groupby([col_rep, 'Obj_Clean'])[col_visita].transform('count')
+
+palabras_prohibidas_rep = ['', '-', 'nan', 'none', 'nat', '0', 'ok', 'bien']
+
+def check_objetivo_repetido(row):
+    obj = row['Obj_Clean']
+    if obj in palabras_prohibidas_rep or len(obj) < 6: 
+        return False
+    return row['Rep_Obj_Count'] > 1
+
+df_unique['Es_Obj_Repetido'] = df_unique.apply(check_objetivo_repetido, axis=1)
+
+total_comentarios = len(df_unique)
+comentarios_repetidos = int(df_unique['Es_Obj_Repetido'].sum())
+pct_copia = (comentarios_repetidos / total_comentarios * 100) if total_comentarios > 0 else 0
+
+ckpi1, ckpi2, ckpi3 = st.columns(3)
+ckpi1.metric("Visitas Únicas Evaluadas", f"{total_comentarios:,}")
+ckpi2.metric("Objetivos Autorrepetidos", f"{comentarios_repetidos:,}")
+ckpi3.metric("% Índice Global Copy-Paste (Objetivos)", f"{pct_copia:.1f}%")
+st.markdown("---")
+
+rep_copia = df_unique.groupby(col_rep).agg(
+    Total_Visitas=(col_visita, 'count'), 
+    Comentarios_Repetidos=('Es_Obj_Repetido', lambda x: int(x.sum()))
+).reset_index()
+
+rep_copia.columns = ['Representante', 'Total_Visitas', 'Objetivos_Repetidos']
+rep_copia['Pct_Copia'] = (rep_copia['Objetivos_Repetidos'] / rep_copia['Total_Visitas'] * 100).round(1)
+rep_copia = rep_copia.sort_values(by='Pct_Copia', ascending=True)
+
+fig_bar_copia = px.bar(
+    rep_copia, x='Pct_Copia', y='Representante', text='Pct_Copia', template='plotly_dark',
+    title="<b>Índice de Copy-Paste en Objetivos (%) por Representante</b>",
+    color='Pct_Copia', color_continuous_scale=[[0.0, '#3DD6FF'], [0.4, '#7A2CFF'], [0.8, '#FF2D8F'], [1.0, '#9B2C2C']],
+    range_color=[0, 100], orientation='h'
+)
+fig_bar_copia.update_traces(texttemplate='%{text}%', textposition='outside', textfont_size=11)
+fig_bar_copia.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=max(450, len(rep_copia)*25), font=dict(color='white'))
+st.plotly_chart(fig_bar_copia, use_container_width=True)
+
+# ==========================================
+# SECCIÓN 5: HÁBITO DE REPORTE
+# ==========================================
+st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
+st.subheader("5. Hábito de Reporte (Franja Horaria y Oportunidad)")
+st.markdown("<span style='color: #B7BCC9;'>Auditoría de puntualidad y franja de registro de bitácoras.</span>", unsafe_allow_html=True)
+st.markdown("---")
+
+def parse_hour_slot(hora_str):
+    try:
+        dt = pd.to_datetime(str(hora_str), format='%H:%M:%S', errors='coerce')
+        if pd.isna(dt): return 'No Registrada'
+        h = dt.hour
+        if 5 <= h < 12: return '1. Mañana (05:00 - 12:00)'
+        elif 12 <= h < 18: return '2. Tarde (12:00 - 18:00)'
+        else: return '3. Noche / Madrugada (18:00 - 05:00)'
+    except: return 'No Registrada'
+
+if col_hora and col_hora in df_unique.columns:
+    df_unique['Franja_Horaria'] = df_unique[col_hora].apply(parse_hour_slot)
+    total_visitas_h = len(df_unique)
+    nocturnas_fuera = len(df_unique[df_unique['Franja_Horaria'] == '3. Noche / Madrugada (18:00 - 05:00)'])
+    pct_nocturnas = (nocturnas_fuera / total_visitas_h * 100) if total_visitas_h > 0 else 0
+
+    hkpi1, hkpi2, hkpi3 = st.columns(3)
+    hkpi1.metric("Total Visitas Evaluadas", f"{total_visitas_h:,}")
+    hkpi2.metric("Registros en Noche / Madrugada", f"{nocturnas_fuera:,}")
+    hkpi3.metric("% Alerta Acumulación Nocturna", f"{pct_nocturnas:.1f}%")
+    st.markdown("---")
+
+    franja_counts = df_unique['Franja_Horaria'].value_counts().reset_index()
+    franja_counts.columns = ['Franja Horaria', 'Total Visitas']
+    franja_counts = franja_counts.sort_values(by='Franja Horaria')
+    color_map = {'1. Mañana (05:00 - 12:00)': '#2ECC71', '2. Tarde (12:00 - 18:00)': '#3DD6FF', '3. Noche / Madrugada (18:00 - 05:00)': '#FF2D8F', 'No Registrada': '#B7BCC9'}
+
+    fig_pie = px.pie(
+        franja_counts, names='Franja Horaria', values='Total Visitas', 
+        hole=0.5, template='plotly_dark', 
+        title="Semáforo de Oportunidad en el Registro de Visitas", 
+        color='Franja Horaria', color_discrete_map=color_map
+    )
+    fig_pie.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=450, font=dict(color='white'))
+    st.plotly_chart(fig_pie, use_container_width=True)
+else:
+    st.info("No se detectó la columna de hora de registro en el archivo de visitas.")
