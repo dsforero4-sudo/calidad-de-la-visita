@@ -610,3 +610,80 @@ if uploaded_impactos is not None or os.path.exists('Impactos-Promocionales-V2_ea
         st.error(f"Error al procesar el gráfico de impactos: {e}")
 else:
     st.info("💡 Carga el archivo de Impactos Promocionales en la barra lateral para ver esta comparativa.")
+
+# ==========================================
+# SECCIÓN 2 (Continuación): GRÁFICOS DE DISTRIBUCIÓN (DOS COLUMNAS)
+# ==========================================
+st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
+st.subheader("Distribución Porcentual: Impactos y Ayudas Visuales")
+st.markdown("<span style='color: #B7BCC9;'>Comparativa de participación por línea y producto.</span>", unsafe_allow_html=True)
+st.markdown("---")
+
+col_t1, col_t2 = st.columns(2)
+
+# --- COLUMNA 1: Torta de Impactos Promocionales ---
+with col_t1:
+    if uploaded_impactos is not None or os.path.exists('Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx'):
+        try:
+            path_imp = uploaded_impactos if uploaded_impactos is not None else 'Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx'
+            df_imp_raw = pd.read_excel(path_imp, header=None)
+            
+            real_cols = [3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36, 39]
+            product_impacts = {}
+            
+            for r in range(11, len(df_imp_raw)):
+                prod = df_imp_raw.iloc[r, 1]
+                if pd.isna(prod): continue
+                prod = str(prod).strip()
+                if prod == '' or prod == '-': continue
+                    
+                row_sum = 0
+                for c in real_cols:
+                    val = df_imp_raw.iloc[r, c]
+                    if pd.notna(val) and val != '-':
+                        try: row_sum += float(val)
+                        except: pass
+                if row_sum > 0:
+                    product_impacts[prod] = product_impacts.get(prod, 0) + row_sum
+                    
+            df_pie_imp = pd.DataFrame(list(product_impacts.items()), columns=['Producto', 'Impactos'])
+            
+            fig_pie_prod = px.pie(
+                df_pie_imp, names='Producto', values='Impactos', 
+                hole=0.4, template='plotly_dark', 
+                title="<b>Impactos por Producto</b>"
+            )
+            fig_pie_prod.update_traces(textposition='inside', textinfo='percent+label')
+            fig_pie_prod.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=420, font=dict(color='white'), showlegend=False)
+            st.plotly_chart(fig_pie_prod, use_container_width=True)
+        except Exception as e:
+            st.error(f"Error en torta de impactos: {e}")
+    else:
+        st.info("Carga el archivo de impactos.")
+
+# --- COLUMNA 2: Torta de Ayudas Visuales ---
+with col_t2:
+    path_av = uploaded_av if uploaded_av is not None else ('Ayudas_visuales.xlsx' if os.path.exists('Ayudas_visuales.xlsx') else None)
+    if path_av is not None:
+        try:
+            df_av_raw = pd.read_excel(path_av, skiprows=2, header=None)
+            # Columna 4 es Línea, Columna 15 es Ayudas Visuales Presentadas
+            df_av_clean = df_av_raw[[4, 15]].copy()
+            df_av_clean.columns = ['Línea', 'Ayudas_Visuales']
+            df_av_clean['Ayudas_Visuales'] = pd.to_numeric(df_av_clean['Ayudas_Visuales'], errors='coerce').fillna(0)
+            
+            df_av_group = df_av_clean.groupby('Línea', as_index=False)['Ayudas_Visuales'].sum()
+            df_av_group = df_av_group[df_av_group['Ayudas_Visuales'] > 0]
+            
+            fig_pie_av = px.pie(
+                df_av_group, names='Línea', values='Ayudas_Visuales', 
+                hole=0.4, template='plotly_dark', 
+                title="<b>Ayudas Visuales por Línea</b>"
+            )
+            fig_pie_av.update_traces(textposition='inside', textinfo='percent+label')
+            fig_pie_av.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=420, font=dict(color='white'), showlegend=False)
+            st.plotly_chart(fig_pie_av, use_container_width=True)
+        except Exception as e:
+            st.error(f"Error en torta de ayudas visuales: {e}")
+    else:
+        st.info("Carga el archivo de Ayudas Visuales en la barra lateral.")
