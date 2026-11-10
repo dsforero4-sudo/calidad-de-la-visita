@@ -160,20 +160,20 @@ cliente_input = st.sidebar.text_input("Nombre del Cliente / Cuenta", value="Essi
 lineas_input = st.sidebar.text_input("Líneas / Segmento del Informe", value="Línea Institucional y Médica", key="input_lineas_rep")
 
 @st.cache_data
-def cargar_datos_hoja(source, hoja_nombre):
+def cargar_datos_hoja(source_bytes, hoja_nombre):
     try:
-        df = pd.read_excel(source, sheet_name=hoja_nombre)
+        df = pd.read_excel(io.BytesIO(source_bytes), sheet_name=hoja_nombre)
         df.columns = df.columns.astype(str).str.strip()
         return df
-    except Exception:
+    except Exception as e:
         return None
 
 @st.cache_data
-def procesar_archivo_impactos(file):
-    if file is None: 
+def procesar_archivo_impactos(file_bytes):
+    if file_bytes is None: 
         return None
     try:
-        df_raw = pd.read_excel(file, sheet_name='Consulta', header=None)
+        df_raw = pd.read_excel(io.BytesIO(file_bytes), sheet_name='Consulta', header=None)
         row9 = df_raw.iloc[9].values
         row10 = df_raw.iloc[10].values
         
@@ -226,22 +226,30 @@ def procesar_archivo_impactos(file):
                     except: 
                         pass
         return pd.DataFrame(records)
-    except Exception: 
+    except Exception as e: 
         return None
 
 df_visitas = None
 default_path = 'listado_visitas_2026-09-07_11-44-08.xlsx'
-source_file = uploaded_file if uploaded_file is not None else (default_path if os.path.exists(default_path) else None)
 
-if source_file is not None:
+# Determinar origen del archivo de visitas (subido o local por defecto)
+source_bytes = None
+if uploaded_file is not None:
+    source_bytes = uploaded_file.getvalue()
+elif os.path.exists(default_path):
+    with open(default_path, "rb") as f:
+        source_bytes = f.read()
+
+if source_bytes is not None:
     try:
-        xls = pd.ExcelFile(source_file)
+        xls = pd.ExcelFile(io.BytesIO(source_bytes))
         hoja_seleccionada = st.sidebar.selectbox("Seleccione la Hoja de Visitas", options=xls.sheet_names, key="select_hoja_excel")
-        df_visitas = cargar_datos_hoja(source_file, hoja_seleccionada)
-    except Exception:
+        df_visitas = cargar_datos_hoja(source_bytes, hoja_seleccionada)
+    except Exception as e:
+        st.sidebar.error(f"Error procesando archivo de visitas: {e}")
         df_visitas = None
 
-df_impactos = procesar_archivo_impactos(uploaded_impactos)
+df_impactos = procesar_archivo_impactos(uploaded_impactos.getvalue() if uploaded_impactos is not None else None)
 
 if df_visitas is not None:
     def buscar_columna(df, posibles_nombres):
@@ -258,3 +266,128 @@ if df_visitas is not None:
     col_visita = buscar_columna(df_visitas, ['Cod. visita', 'Cod visita', 'Código visita', 'Codigo visita', 'Id visita', 'Visita'])
     col_fecha = buscar_columna(df_visitas, ['Fecha visita', 'Fecha', 'Date'])
     col_hora = buscar_columna(df_visitas, ['Hora digitado', 'Hora', 'Time'])
+    col_med = buscar_columna(df_visitas, ['Nombre farmacia o cliente', 'Farmacia', 'Médicos', 'Medicos', 'Cliente', 'Institución', 'Institucion', 'Nombre'])
+    col_obj = buscar_columna(df_visitas, ['Objetivo', 'Obj', 'Objetivos'])
+    col_com = buscar_columna(df_visitas, ['Comentario', 'Comentarios', 'Observación', 'Observacion'])
+    col_acomp = buscar_columna(df_visitas, ['Visita acompañada', 'Visita acompanada', 'Acompañada', 'Acompañamiento'])
+    col_muestra = buscar_columna(df_visitas, ['Material entregado', 'Muestra', 'Muestras'])
+    col_cant_muestra = buscar_columna(df_visitas, ['Cantidad de material', 'Cantidad', 'Cant'])
+    col_impacto_prod = buscar_columna(df_visitas, ['Impactos', 'Impacto', 'Producto'])
+
+    if not col_visita:
+        col_visita = df_visitas.columns[0]
+    if not col_rep:
+        col_rep = df_visitas.columns[0]
+    if not col_reg:
+        col_reg = df_visitas.columns[0]
+    if not col_com:
+        df_visitas['Comentario'] = '-'
+        col_com = 'Comentario'
+    if not col_obj:
+        df_visitas['Objetivo'] = '-'
+        col_obj = 'Objetivo'
+
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("3. Filtros en Cascada")
+    
+    regiones = sorted(df_visitas[col_reg].dropna().unique()) if col_reg else []
+    selected_regiones = st.sidebar.multiselect("Región / Coordinación", options=regiones, default=regiones, key="filtro_reg")
+    
+    df_f1 = df_visitas[df_visitas[col_reg].isin(selected_regiones)] if col_reg and selected_regiones else df_visitas
+    
+    ciclos = sorted(df_f1[col_ciclo].dropna().unique()) if col_ciclo else []
+    selected_ciclos = st.sidebar.multiselect("Ciclo", options=ciclos, default=ciclos, key="filtro_ciclo")
+    
+    df_f2 = df_f1[df_f1[col_ciclo].isin(selected_ciclos)] if ciclos and selected_ciclos else df_f1
+    
+    lineas = sorted(df_f2[col_lin].dropna().unique()) if col_lin else []
+    selected_lineas = st.sidebar.multiselect("Línea Estratégica", options=lineas, default=lineas, key="filtro_lin")
+    
+    df_filtered = df_f2[df_f2[col_lin].isin(selected_lineas)] if col_lin and selected_lineas else df_f2
+    
+    representantes = sorted(df_filtered[col_rep].dropna().unique()) if col_rep else []
+    
+    selected_reps = st.sidebar.multiselect("Representante", options=representantes, default=representantes, key="filtro_rep")
+    
+    df_filtered = df_filtered[df_filtered[col_rep].isin(selected_reps)] if col_rep and selected_reps else df_filtered
+    
+    df_unique = df_filtered.drop_duplicates(subset=[col_visita]).copy()
+    
+    df_unique['Comentario_Clean'] = df_unique[col_com].fillna('').astype(str).str.strip().str.lower()
+    df_unique['Rep_Comentario_Count'] = df_unique.groupby([col_rep, 'Comentario_Clean'])[col_visita].transform('count')
+    
+    def check_repetido_individual(row):
+        com = row['Comentario_Clean']
+        if com in ['', 'nan', 'none', '-']: 
+            return False
+        return row['Rep_Comentario_Count'] > 1
+
+    df_unique['Es_Repetido'] = df_unique.apply(check_repetido_individual, axis=1)
+
+    # ==========================================
+    # SECCIÓN 1: ESTABLECIMIENTO DE OBJETIVOS (MARCO SMART & TÉCNICA DE VENTAS)
+    # ==========================================
+    st.subheader("1. Establecimiento de Objetivos (Marco SMART & Técnica de Ventas)")
+    st.markdown("<span style='color: #B7BCC9;'>Evaluación rigurosa de los objetivos ingresados en bitácora bajo los 5 pilares SMART y su diferenciación de actividades logísticas.</span>", unsafe_allow_html=True)
+    st.markdown("---")
+
+    df_obj_eval = df_unique.copy()
+    df_obj_eval['Obj_Text'] = df_obj_eval[col_obj].fillna('').astype(str).str.strip()
+    
+    palabras_prohibidas_obj = ['', '-', 'nan', 'none', 'nat', '0', 'ok', 'bien']
+    palabras_actividades = ['entregar', 'visitar', 'saludar', 'llamar', 'dejar', 'muestra', 'material', 'obsequio']
+
+    def evaluar_smart_detallado(txt):
+        t_low = txt.lower()
+        if t_low in palabras_prohibidas_obj or len(txt) < 8:
+            return 0, "No Definido / Vacío", "El objetivo no contiene información válida."
+        
+        puntos = 0
+        detalles = []
+        
+        if any(w in t_low for w in ['producto', 'estudio', 'portafolio', 'tratamiento', 'dosis', 'pacientes', 'protocolo', 'receta', 'prescrip']):
+            puntos += 1
+            detalles.append("S(+)")
+        else:
+            detalles.append("S(-)")
+            
+        if any(w in t_low for w in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'aumentar', 'incrementar', 'reducir', 'veces', 'pacientes', 'semanales', 'mensuales']):
+            puntos += 1
+            detalles.append("M(+)")
+        else:
+            detalles.append("M(-)")
+            
+        if not any(t_low.startswith(act) for act in palabras_actividades):
+            puntos += 1
+            detalles.append("A(+)")
+        else:
+            detalles.append("A(-) [Confunde Actividad Logística]")
+            
+        if any(w in t_low for w in ['iniciar', 'reiniciar', 'aumentar', 'sostener', 'mantener', 'reemplazar', 'posicionar', 'evaluar', 'prescripción', 'uso', 'guía', 'institucional']):
+            puntos += 1
+            detalles.append("R(+)")
+        else:
+            detalles.append("R(-)")
+            
+        if any(w in t_low for w in ['próxima visita', 'proxima visita', 'mes', 'trimestre', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre', 'fecha', 'próximo']):
+            puntos += 1
+            detalles.append("T(+)")
+        else:
+            detalles.append("T(-)")
+
+        if puntos <= 2:
+            nivel = "0-2 Puntos: Bajo / No Definido"
+        elif puntos <= 4:
+            nivel = "3-4 Puntos: Aceptable"
+        else:
+            nivel = "5 Puntos: Excelente (SMART)"
+            
+        return puntos, nivel, ", ".join(detalles)
+
+    res_smart = df_obj_eval['Obj_Text'].apply(evaluar_smart_detallado)
+    df_obj_eval['Smart_Puntaje'] = [r[0] for r in res_smart]
+    df_obj_eval['Smart_Nivel'] = [r[1] for r in res_smart]
+    df_obj_eval['Smart_Detalle'] = [r[2] for r in res_smart]
+
+    total_obj_eval = len(df_obj_eval)
+    excelente_smart =
