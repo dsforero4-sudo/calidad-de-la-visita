@@ -623,33 +623,24 @@ else:
     st.info("💡 Carga el archivo de Impactos Promocionales en la barra lateral para ver esta comparativa.")
 
 # ==========================================
-# SECCIÓN 3: ACTITUD FRENTE AL PORTAFOLIO
+# SECCIÓN 3: ACTITUD FRENTE AL PORTAFOLIO Y ADOPCIÓN
 # ==========================================
 st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
-st.subheader("3. Actitud frente al Portafolio")
-st.markdown("<span style='color: #B7BCC9;'>Evaluación cualitativa de la receptividad y actitud del profesional médico basada en el Comentario de Impacto.</span>", unsafe_allow_html=True)
+st.subheader("3. Actitud frente al Portafolio y Nivel de Adopción")
+st.markdown("<span style='color: #B7BCC9;'>Contraste entre la receptividad médica cualitativa y el nivel de adopción de la categorización actual.</span>", unsafe_allow_html=True)
 st.markdown("---")
 
 col_impacto = buscar_columna(df_visitas, ['Comentario de Impacto', 'Comentario impacto', 'Comentario', 'Impacto'])
 col_prod_visita = buscar_columna(df_visitas, ['Impactos', 'Producto', 'Producto promocionado', 'Marca'])
 
 if col_impacto and col_impacto in df_visitas.columns:
-    col_f_prod, col_g_chart = st.columns([1, 2.5])
     
-    with col_f_prod:
-        st.markdown("##### 🔍 Filtrar por Producto")
-        if col_prod_visita and col_prod_visita in df_visitas.columns:
-            productos_disp = sorted([str(p).strip() for p in df_visitas[col_prod_visita].dropna().unique() if str(p).strip() not in ['', '-']])
-            selected_producto = st.selectbox("Seleccione Producto", options=["Todos los Productos"] + productos_disp, key="select_prod_actitud")
-        else:
-            selected_producto = "Todos los Productos"
-
-    with col_g_chart:
-        df_act_filtered = df_visitas.copy()
-        if selected_producto != "Todos los Productos" and col_prod_visita and col_prod_visita in df_act_filtered.columns:
-            df_act_filtered = df_act_filtered[df_act_filtered[col_prod_visita].astype(str).str.strip() == selected_producto]
-
-        df_actitud_eval = df_act_filtered.drop_duplicates(subset=[col_visita]).copy() if col_visita in df_visitas.columns else df_act_filtered.copy()
+    # --- CONTRASTE DE DOS TORTAS LADO A LADO ---
+    col_t1, col_t2 = st.columns(2)
+    
+    # Torta 1: Actitud del Médico
+    with col_t1:
+        df_actitud_eval = df_visitas.drop_duplicates(subset=[col_visita]).copy() if col_visita in df_visitas.columns else df_visitas.copy()
         df_actitud_eval['Comentario_Clean'] = df_actitud_eval[col_impacto].fillna('Sin sondeo').astype(str).str.strip()
         df_actitud_eval['Comentario_Clean'] = df_actitud_eval['Comentario_Clean'].replace(['-', '', 'nan', 'none', 'NaN', 'NAN'], 'Sin sondeo')
         
@@ -662,15 +653,63 @@ if col_impacto and col_impacto in df_visitas.columns:
             otros_sum = df_act_counts.iloc[top_n:]['Total'].sum()
             df_act_counts = pd.concat([df_top, pd.DataFrame([{'Comentario_Impacto': 'Otros / Varios', 'Total': otros_sum}])], ignore_index=True)
 
-        fig_pie_actitud = px.pie(df_act_counts, names='Comentario_Impacto', values='Total', hole=0.4, template='plotly_dark', title=f"<b>Actitud del Médico ({selected_producto})</b>")
+        fig_pie_actitud = px.pie(
+            df_act_counts, names='Comentario_Impacto', values='Total', 
+            hole=0.4, template='plotly_dark', 
+            title="<b>Actitud del Médico (General)</b>"
+        )
         fig_pie_actitud.update_traces(textposition='inside', textinfo='percent+label')
-        fig_pie_actitud.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=450, font=dict(color='white'))
+        fig_pie_actitud.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=420, font=dict(color='white'), showlegend=False)
         st.plotly_chart(fig_pie_actitud, use_container_width=True)
+
+    # Torta 2: Nivel de Adopción (Desde el archivo de Consulta Detallada de Contactos)
+    with col_t2:
+        # Carga automática del archivo recién adjuntado si existe
+        path_panel = 'Consulta_Detallada_de_Contactos_V2_para_Médicos_2026-11-10_11_41_45.xlsx'
+        df_panel_loaded = None
+        if os.path.exists(path_panel):
+            try:
+                df_panel_loaded = pd.read_excel(path_panel, header=10)
+            except:
+                pass
+                
+        if df_panel_loaded is not None:
+            # La columna 'Nivel de Adopción' viene en la última columna o con encabezado 'Nivel de Adopción'
+            col_adop = None
+            for c in df_panel_loaded.columns:
+                val_sample = str(df_panel_loaded[c].iloc[0]).strip().lower() if len(df_panel_loaded) > 0 else ""
+                if 'nivel de adopción' in str(c).lower() or 'adopción' in val_sample or 'nivel' in val_sample:
+                    col_adop = c
+                    break
+            if col_adop is None and len(df_panel_loaded.columns) >= 15:
+                col_adop = df_panel_loaded.columns[14] # Columna FZ / Nivel de Adopción típica
+
+            if col_adop is not None:
+                df_panel_clean = df_panel_loaded.iloc[1:].copy() # Omitir fila de encabezados duplicados si los hay
+                df_panel_clean['Adopcion_Clean'] = df_panel_clean[col_adop].fillna('Sin Nivel').astype(str).str.strip()
+                df_adop_counts = df_panel_clean['Adopcion_Clean'].value_counts().reset_index()
+                df_adop_counts.columns = ['Nivel_Adopcion', 'Total']
+                # Filtrar encabezados residuales si los hubiera
+                df_adop_counts = df_adop_counts[df_adop_counts['Nivel_Adopcion'] != 'Nivel de Adopción']
+
+                fig_pie_adop = px.pie(
+                    df_adop_counts, names='Nivel_Adopcion', values='Total', 
+                    hole=0.4, template='plotly_dark', 
+                    title="<b>Nivel de Adopción (Panel Actual)</b>"
+                )
+                fig_pie_adop.update_traces(textposition='inside', textinfo='percent+label')
+                fig_pie_adop.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=420, font=dict(color='white'), showlegend=False)
+                st.plotly_chart(fig_pie_adop, use_container_width=True)
+            else:
+                st.info("💡 No se encontró la columna de Nivel de Adopción en el archivo.")
+        else:
+            st.info("💡 Coloque el archivo de Consulta Detallada de Contactos en la ruta del proyecto para visualizar el Nivel de Adopción.")
 
     st.markdown("---")
 
+    # --- GRÁFICA DE BARRAS HORIZONTALES APILADAS AL 100% (ORDENADAS POR ESPERADOS) ---
     st.markdown("### 📊 Distribución Porcentual de Actitud por Producto")
-    st.markdown("<span style='color: #B7BCC9;'>Comparativa 100% apilada ordenada por Impactos Esperados.</span>", unsafe_allow_html=True)
+    st.markdown("<span style='color: #B7BCC9;'>Comparativa 100% apilada ordenada por volumen de Impactos Esperados.</span>", unsafe_allow_html=True)
 
     if col_prod_visita and col_prod_visita in df_visitas.columns:
         df_bar_data = df_visitas.copy()
@@ -683,8 +722,7 @@ if col_impacto and col_impacto in df_visitas.columns:
         df_pivot = pd.crosstab(df_bar_data[col_prod_visita], df_bar_data['Comentario_Clean'], normalize='index') * 100
         df_pivot = df_pivot.reset_index()
 
-        # Obtener los impactos esperados por producto desde el archivo de impactos para ordenar
-        expected_order = []
+        # Ordenar por impactos esperados
         path_imp = uploaded_impactos if uploaded_impactos is not None else ('Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx' if os.path.exists('Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx') else None)
         
         if path_imp is not None:
@@ -701,7 +739,6 @@ if col_impacto and col_impacto in df_visitas.columns:
                     esp_sum = sum(float(df_imp_raw.iloc[r, c]) for c in esp_cols if pd.notna(df_imp_raw.iloc[r, c]) and df_imp_raw.iloc[r, c] != '-')
                     if esp_sum > 0: prod_esp[prod] = prod_esp.get(prod, 0) + esp_sum
                 
-                # Ordenar productos según los esperados de menor a mayor para que Plotly los apile de arriba a abajo correctamente
                 sorted_prods = sorted(prod_esp.keys(), key=lambda x: prod_esp[x])
                 df_pivot['order'] = df_pivot[col_prod_visita].map(lambda x: sorted_prods.index(x) if x in sorted_prods else 999)
                 df_pivot = df_pivot.sort_values(by='order').drop(columns=['order'])
