@@ -682,7 +682,7 @@ col_prod_visita = buscar_columna(df_visitas, ['Impactos', 'Producto', 'Producto 
 
 if col_impacto and col_impacto in df_visitas.columns:
     
-    # Diseño en dos columnas: Filtro de Producto a la izquierda, Gráfica a la derecha
+    # Diseño en dos columnas: Filtro de Producto a la izquierda, Gráfica interactiva a la derecha
     col_f_prod, col_g_chart = st.columns([1, 2.5])
     
     with col_f_prod:
