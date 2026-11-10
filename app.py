@@ -272,66 +272,100 @@ df_filtered = df_filtered[df_filtered[col_rep].isin(selected_reps)] if col_rep a
 df_unique = df_filtered.drop_duplicates(subset=[col_visita]).copy()
 
 # ==========================================
-# SECCIÓN 1: VALIDACIÓN DE OBJETIVOS SMART
+# SECCIÓN 1: ESTABLECIMIENTO DE OBJETIVOS
 # ==========================================
-st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
-st.subheader("1. Validación de Objetivos SMART")
-st.markdown("<span style='color: #B7BCC9;'>Evaluación y auditoría de la calidad de los objetivos planteados en las visitas médicas.</span>", unsafe_allow_html=True)
+st.subheader("1. Establecimiento de Objetivos (Marco SMART & Técnica de Ventas)")
+st.markdown("<span style='color: #B7BCC9;'>Evaluación rigurosa de los objetivos ingresados en bitácora bajo los 5 pilares SMART.</span>", unsafe_allow_html=True)
 st.markdown("---")
 
-if df_visitas is not None:
-    # Búsqueda de columnas relevantes para los objetivos
-    col_obj_texto = buscar_columna(df_visitas, ['Objetivo', 'Objetivo de visita', 'Meta', 'Propósito'])
-    col_calificacion = buscar_columna(df_visitas, ['Calificación SMART', 'Calificacion', 'Evaluación Objetivo', 'Score'])
-    col_argumento = buscar_columna(df_visitas, ['Argumentación', 'Argumentacion', 'Justificación', 'Comentario Objetivo', 'Motivo'])
+df_obj_eval = df_unique.copy()
+df_obj_eval['Obj_Text'] = df_obj_eval[col_obj].fillna('').astype(str).str.strip()
 
-    total_v = len(df_unique)
+palabras_prohibidas_obj = ['', '-', 'nan', 'none', 'nat', '0', 'ok', 'bien']
+palabras_actividades = ['entregar', 'visitar', 'saludar', 'llamar', 'dejar', 'muestra', 'material', 'obsequio']
+
+def evaluar_smart_detallado(txt):
+    t_low = txt.lower()
+    if t_low in palabras_prohibidas_obj or len(txt) < 8:
+        return 0, "No Definido / Vacío", "El objetivo no contiene información válida."
     
-    # Métricas clave de la sección
-    col_obj1, col_obj2, col_obj3 = st.columns(3)
-    col_obj1.metric("Visitas Evaluadas", f"{total_v:,}")
+    puntos = 0
+    detalles = []
     
-    # Simulamos o calculamos los objetivos calificados si las columnas existen en el archivo
-    validados_count = 0
-    if col_calificacion and col_calificacion in df_visitas.columns:
-        validados_count = int(df_visitas[df_calificacion].astype(str).str.lower().isin(['cumple', 'valido', 'sí', 'si', 'aprobado']).sum())
-    
-    col_obj2.metric("Objetivos Validados (SMART)", f"{validados_count:,}")
-    col_obj3.metric("Objetivos por Mejorar / Pendientes", f"{total_v - validados_count:,}")
+    if any(w in t_low for w in ['producto', 'estudio', 'portafolio', 'tratamiento', 'dosis', 'pacientes', 'protocolo', 'receta', 'prescrip']):
+        puntos += 1
+        detalles.append("S(+)")
+    else:
+        detalles.append("S(-)")
+        
+    if any(w in t_low for w in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'aumentar', 'incrementar', 'reducir', 'veces', 'pacientes', 'semanales', 'mensuales']):
+        puntos += 1
+        detalles.append("M(+)")
+    else:
+        detalles.append("M(-)")
+        
+    if not any(t_low.startswith(act) for act in palabras_actividades):
+        puntos += 1
+        detalles.append("A(+)")
+    else:
+        detalles.append("A(-) [Confunde Actividad Logística]")
+        
+    if any(w in t_low for w in ['iniciar', 'reiniciar', 'aumentar', 'sostener', 'mantener', 'reemplazar', 'posicionar', 'evaluar', 'prescripción', 'uso', 'guía', 'institucional']):
+        puntos += 1
+        detalles.append("R(+)")
+    else:
+        detalles.append("R(-)")
+        
+    if any(w in t_low for w in ['próxima visita', 'proxima visita', 'mes', 'trimestre', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre', 'fecha', 'próximo']):
+        puntos += 1
+        detalles.append("T(+)")
+    else:
+        detalles.append("T(-)")
 
-    st.markdown("---")
+    if puntos <= 2:
+        nivel = "0-2 Puntos: Bajo / No Definido"
+    elif puntos <= 4:
+        nivel = "3-4 Puntos: Aceptable"
+    else:
+        nivel = "5 Puntos: Excelente (SMART)"
+        
+    return puntos, nivel, ", ".join(detalles)
 
-    # Preparación de los datos para visualización y exportación
-    df_export = df_visitas.copy()
-    
-    # Si no existen las columnas exactas de calificación o argumentación en el archivo bruto, 
-    # generamos una estructura estándar de auditoría para asegurar que el exportable no falle.
-    if not col_calificacion:
-        df_export['Calificación SMART'] = "Pendiente de revisión"
-    if not col_argumento:
-        df_export['Argumentación'] = "Sin argumentación registrada en el reporte base."
+res_smart = df_obj_eval['Obj_Text'].apply(evaluar_smart_detallado)
+df_obj_eval['Smart_Puntaje'] = [r[0] for r in res_smart]
+df_obj_eval['Smart_Nivel'] = [r[1] for r in res_smart]
+df_obj_eval['Smart_Detalle'] = [r[2] for r in res_smart]
 
-    # Botón de Exportación (Excel / CSV)
-    st.markdown("##### 📥 Exportar Detalle de Objetivos y Argumentaciones")
-    st.markdown("<span style='color: #B7BCC9;'>Descarga el reporte detallado con la calificación y el sustento argumentativo por visita.</span>", unsafe_allow_html=True)
+total_obj_eval = len(df_obj_eval)
+excelente_smart = len(df_obj_eval[df_obj_eval['Smart_Puntaje'] == 5])
+bajo_smart = len(df_obj_eval[df_obj_eval['Smart_Puntaje'] <= 2])
 
-    # Función para convertir dataframe a Excel en memoria para descarga
-    import io
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df_export.to_excel(writer, index=False, sheet_name='Auditoria_Objetivos_SMART')
-    processed_data = output.getvalue()
+om1, om2, om3 = st.columns(3)
+om1.metric("Visitas Evaluadas (Objetivos)", f"{total_obj_eval:,}")
+om2.metric("Objetivos Excelentes (SMART)", f"{excelente_smart:,}", f"{(excelente_smart/total_obj_eval*100 if total_obj_eval>0 else 0):.1f}%")
+om3.metric("Objetivos Bajo / No Definidos", f"{bajo_smart:,}", f"{(bajo_smart/total_obj_eval*100 if total_obj_eval>0 else 0):.1f}%", delta_color="inverse")
+st.markdown("---")
 
-    st.download_button(
-        label="📥 Descargar Reporte SMART con Argumentaciones (.xlsx)",
-        data=processed_data,
-        file_name="Auditoria_Objetivos_SMART_Pharmadvisor.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        key="download_smart_report"
-    )
+df_smart_counts = df_obj_eval['Smart_Nivel'].value_counts().reset_index()
+df_smart_counts.columns = ['Smart_Nivel', 'Total']
 
-else:
-    st.info("👈 Por favor cargue el **Listado de Visitas** en la barra lateral para habilitar la validación y el exportable de objetivos.")# ==========================================
+color_map_smart = {
+    '5 Puntos: Excelente (SMART)': '#2ECC71', 
+    '3-4 Puntos: Aceptable': '#3DD6FF', 
+    '0-2 Puntos: Bajo / No Definido': '#FF2D8F',
+    'No Definido / Vacío': '#B7BCC9'
+}
+
+fig_smart_pie = px.pie(
+    df_smart_counts, names='Smart_Nivel', values='Total', 
+    hole=0.5, template='plotly_dark', 
+    title="<b>Distribución Global de Niveles SMART en Objetivos</b>", 
+    color='Smart_Nivel', color_discrete_map=color_map_smart
+)
+fig_smart_pie.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=450, font=dict(color='white'))
+st.plotly_chart(fig_smart_pie, use_container_width=True)
+
+# ==========================================
 # SECCIÓN 1.1: MANEJO DE LA ACTITUD Y CIERRE (COPY-PASTE EN OBJETIVOS)
 # ==========================================
 st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
