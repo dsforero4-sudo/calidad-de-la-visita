@@ -271,138 +271,148 @@ selected_reps = st.sidebar.multiselect("Representante", options=representantes, 
 df_filtered = df_filtered[df_filtered[col_rep].isin(selected_reps)] if col_rep and selected_reps else df_filtered
 df_unique = df_filtered.drop_duplicates(subset=[col_visita]).copy()
 # ==========================================
-# SECCIÓN 1: VALIDACIÓN DE OBJETIVOS SMART
+# SECCIÓN 1: ESTABLECIMIENTO DE OBJETIVOS
 # ==========================================
-st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
-st.subheader("1. Validación de Objetivos SMART")
-st.markdown("<span style='color: #B7BCC9;'>Evaluación y auditoría de la calidad de los objetivos planteados en las visitas médicas.</span>", unsafe_allow_html=True)
+st.subheader("1. Establecimiento de Objetivos (Marco SMART & Técnica de Ventas)")
+st.markdown("<span style='color: #B7BCC9;'>Evaluación rigurosa de los objetivos ingresados en bitácora bajo los 5 pilares SMART.</span>", unsafe_allow_html=True)
 st.markdown("---")
 
-if df_visitas is not None:
-    col_obj_texto = buscar_columna(df_visitas, ['Objetivo', 'Objetivo de visita', 'Meta', 'Propósito'])
-    col_calificacion = buscar_columna(df_visitas, ['Calificación SMART', 'Calificacion', 'Calificación', 'Evaluación', 'Evaluación Objetivo', 'Score', 'Estado', 'Validez', 'Validación'])
-    col_argumento = buscar_columna(df_visitas, ['Argumentación', 'Argumentacion', 'Justificación', 'Comentario Objetivo', 'Motivo'])
-    col_rep = buscar_columna(df_visitas, ['Representante', 'Usuario', 'Asesor', 'Ejecutivo'])
-    col_copypaste = buscar_columna(df_visitas, ['Copy Paste', 'Copy-Paste', 'Índice Copy Paste', 'Indice Copy-Paste'])
+df_obj_eval = df_unique.copy()
+df_obj_eval['Obj_Text'] = df_obj_eval[col_obj].fillna('').astype(str).str.strip()
 
-    total_v = len(df_unique)
+palabras_prohibidas_obj = ['', '-', 'nan', 'none', 'nat', '0', 'ok', 'bien']
+palabras_actividades = ['entregar', 'visitar', 'saludar', 'llamar', 'dejar', 'muestra', 'material', 'obsequio']
+
+def evaluar_smart_detallado(txt):
+    t_low = txt.lower()
+    if t_low in palabras_prohibidas_obj or len(txt) < 8:
+        return 0, "No Definido / Vacío", "El objetivo no contiene información válida."
     
-    # Métricas de la Sección 1
-    col_obj1, col_obj2, col_obj3 = st.columns(3)
-    col_obj1.metric("Visitas Evaluadas", f"{total_v:,}")
+    puntos = 0
+    detalles = []
     
-    validados_count = 0
-    if col_calificacion and col_calificacion in df_visitas.columns:
-        validados_count = int(df_visitas[col_calificacion].astype(str).str.lower().isin(['cumple', 'valido', 'válido', 'sí', 'si', 'aprobado', 'ok', 'smart']).sum())
-    
-    col_obj2.metric("Objetivos Validados (SMART)", f"{validados_count:,}")
-    col_obj3.metric("Objetivos por Mejorar / Pendientes", f"{total_v - validados_count:,}")
-
-    st.markdown("---")
-
-    # --- 1. PRIMERA GRÁFICA: TORTA DE CALIFICACIÓN DE OBJETIVOS + BOTÓN INTEGRADO ---
-    st.markdown("### 1.1. Distribución de Calificación de Objetivos")
-    st.markdown("<span style='color: #B7BCC9;'>Proporción general de los objetivos evaluados según su cumplimiento metodológico y exportable de sustentación.</span>", unsafe_allow_html=True)
-
-    col_torta, col_export_box = st.columns([1.8, 1.2])
-
-    with col_torta:
-        if col_calificacion and col_calificacion in df_visitas.columns:
-            df_obj_chart = df_visitas[col_calificacion].fillna('Pendiente').astype(str).str.strip().value_counts().reset_index()
-            df_obj_chart.columns = ['Calificacion', 'Total']
-
-            fig_obj = px.pie(
-                df_obj_chart, names='Calificacion', values='Total', 
-                hole=0.4, template='plotly_dark',
-                title="<b>Calificación SMART de Objetivos</b>"
-            )
-            fig_obj.update_traces(textposition='inside', textinfo='percent+label')
-            fig_obj.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=400, font=dict(color='white'))
-            st.plotly_chart(fig_obj, use_container_width=True)
-        else:
-            df_dummy_obj = pd.DataFrame({
-                'Estado': ['Pendientes / Por Mejorar', 'Validados SMART'],
-                'Total': [total_v - validados_count, validados_count]
-            })
-            fig_obj = px.pie(
-                df_dummy_obj, names='Estado', values='Total', 
-                hole=0.4, template='plotly_dark',
-                title="<b>Estado General de Objetivos SMART</b>"
-            )
-            fig_obj.update_traces(textposition='inside', textinfo='percent+label')
-            fig_obj.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=400, font=dict(color='white'))
-            st.plotly_chart(fig_obj, use_container_width=True)
-
-    with col_export_box:
-        st.markdown("<div style='background-color: #161B22; padding: 25px; border-radius: 10px; border: 1px solid #30363D; height: 100%; display: flex; flex-direction: column; justify-content: center;'>", unsafe_allow_html=True)
-        st.markdown("##### 📥 Sustento y Argumentación")
-        st.markdown("<span style='color: #B7BCC9; font-size: 14px;'>Descarga el archivo consolidado que incluye la calificación detallada y la argumentación de cada objetivo evaluado.</span>", unsafe_allow_html=True)
-        st.markdown("<br>", unsafe_allow_html=True)
-
-        df_export = df_visitas.copy()
-        if not col_calificacion:
-            df_export['Calificación SMART'] = "Pendiente de revisión"
-        if not col_argumento:
-            df_export['Argumentación'] = "Sin argumentación registrada en el reporte base."
-
-        import io
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df_export.to_excel(writer, index=False, sheet_name='Auditoria_Objetivos_SMART')
-        processed_data = output.getvalue()
-
-        st.download_button(
-            label="📥 Descargar Reporte con Argumentaciones",
-            data=processed_data,
-            file_name="Auditoria_Objetivos_SMART_Pharmadvisor.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            key="download_smart_report_integrated",
-            use_container_width=True
-        )
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown("---")
-    # --- 2. SEGUNDA GRÁFICA: BARRAS POR REPRESENTANTE CON ÍNDICE DE COPY-PASTE ---
-    st.markdown("### 1.2. Índice de Copy-Paste por Representante")
-    st.markdown("<span style='color: #B7BCC9;'>Análisis del porcentaje o índice de objetivos repetidos (copy-paste) por cada representante.</span>", unsafe_allow_html=True)
-
-    if col_rep and col_rep in df_visitas.columns:
-        df_rep_data = df_visitas.copy()
-        df_rep_data[col_rep] = df_rep_data[col_rep].astype(str).str.strip()
-        
-        if col_copypaste and col_copypaste in df_rep_data.columns:
-            df_rep_data['CP_Value'] = pd.to_numeric(df_rep_data[col_copypaste], errors='coerce').fillna(0)
-            df_bar_rep = df_rep_data.groupby(col_rep, as_index=False)['CP_Value'].mean()
-            df_bar_rep.columns = ['Representante', 'Indice_CopyPaste']
-        else:
-            if col_obj_texto in df_rep_data.columns:
-                df_rep_data['Es_Duplicado'] = df_rep_data.duplicated(subset=[col_obj_texto], keep=False).astype(int)
-                df_bar_rep = df_rep_data.groupby(col_rep, as_index=False)['Es_Duplicado'].mean()
-                df_bar_rep['Indice_CopyPaste'] = (df_bar_rep['Es_Duplicado'] * 100).round(1)
-                df_bar_rep = df_bar_rep[['Representante', 'Indice_CopyPaste']]
-            else:
-                df_bar_rep = pd.DataFrame({'Representante': df_rep_data[col_rep].unique(), 'Indice_CopyPaste': 0.0})
-
-        df_bar_rep = df_bar_rep.sort_values(by='Indice_CopyPaste', ascending=True)
-
-        fig_bar_rep = px.bar(
-            df_bar_rep, x='Indice_CopyPaste', y='Representante', 
-            orientation='h', template='plotly_dark',
-            title="<b>Índice de Copy-Paste por Representante (%)</b>",
-            text='Indice_CopyPaste'
-        )
-        fig_bar_rep.update_traces(texttemplate='%{text}%', textposition='outside', marker_color='#FF2D8F')
-        fig_bar_rep.update_layout(
-            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', 
-            height=500, xaxis_title="Índice de Copy-Paste (%)", yaxis_title="Representante",
-            font=dict(color='white')
-        )
-        st.plotly_chart(fig_bar_rep, use_container_width=True)
+    if any(w in t_low for w in ['producto', 'estudio', 'portafolio', 'tratamiento', 'dosis', 'pacientes', 'protocolo', 'receta', 'prescrip']):
+        puntos += 1
+        detalles.append("S(+)")
     else:
-        st.info("💡 No se detectó la columna de Representante en el archivo de visitas.")
+        detalles.append("S(-)")
+        
+    if any(w in t_low for w in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'aumentar', 'incrementar', 'reducir', 'veces', 'pacientes', 'semanales', 'mensuales']):
+        puntos += 1
+        detalles.append("M(+)")
+    else:
+        detalles.append("M(-)")
+        
+    if not any(t_low.startswith(act) for act in palabras_actividades):
+        puntos += 1
+        detalles.append("A(+)")
+    else:
+        detalles.append("A(-) [Confunde Actividad Logística]")
+        
+    if any(w in t_low for w in ['iniciar', 'reiniciar', 'aumentar', 'sostener', 'mantener', 'reemplazar', 'posicionar', 'evaluar', 'prescripción', 'uso', 'guía', 'institucional']):
+        puntos += 1
+        detalles.append("R(+)")
+    else:
+        detalles.append("R(-)")
+        
+    if any(w in t_low for w in ['próxima visita', 'proxima visita', 'mes', 'trimestre', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre', 'fecha', 'próximo']):
+        puntos += 1
+        detalles.append("T(+)")
+    else:
+        detalles.append("T(-)")
 
-else:
-    st.info("👈 Por favor cargue el **Listado de Visitas** en la barra lateral para habilitar la validación y el exportable de objetivos.")
+    if puntos <= 2:
+        nivel = "0-2 Puntos: Bajo / No Definido"
+    elif puntos <= 4:
+        nivel = "3-4 Puntos: Aceptable"
+    else:
+        nivel = "5 Puntos: Excelente (SMART)"
+        
+    return puntos, nivel, ", ".join(detalles)
+
+res_smart = df_obj_eval['Obj_Text'].apply(evaluar_smart_detallado)
+df_obj_eval['Smart_Puntaje'] = [r[0] for r in res_smart]
+df_obj_eval['Smart_Nivel'] = [r[1] for r in res_smart]
+df_obj_eval['Smart_Detalle'] = [r[2] for r in res_smart]
+
+total_obj_eval = len(df_obj_eval)
+excelente_smart = len(df_obj_eval[df_obj_eval['Smart_Puntaje'] == 5])
+bajo_smart = len(df_obj_eval[df_obj_eval['Smart_Puntaje'] <= 2])
+
+om1, om2, om3 = st.columns(3)
+om1.metric("Visitas Evaluadas (Objetivos)", f"{total_obj_eval:,}")
+om2.metric("Objetivos Excelentes (SMART)", f"{excelente_smart:,}", f"{(excelente_smart/total_obj_eval*100 if total_obj_eval>0 else 0):.1f}%")
+om3.metric("Objetivos Bajo / No Definidos", f"{bajo_smart:,}", f"{(bajo_smart/total_obj_eval*100 if total_obj_eval>0 else 0):.1f}%", delta_color="inverse")
+st.markdown("---")
+
+df_smart_counts = df_obj_eval['Smart_Nivel'].value_counts().reset_index()
+df_smart_counts.columns = ['Smart_Nivel', 'Total']
+
+color_map_smart = {
+    '5 Puntos: Excelente (SMART)': '#2ECC71', 
+    '3-4 Puntos: Aceptable': '#3DD6FF', 
+    '0-2 Puntos: Bajo / No Definido': '#FF2D8F',
+    'No Definido / Vacío': '#B7BCC9'
+}
+
+fig_smart_pie = px.pie(
+    df_smart_counts, names='Smart_Nivel', values='Total', 
+    hole=0.5, template='plotly_dark', 
+    title="<b>Distribución Global de Niveles SMART en Objetivos</b>", 
+    color='Smart_Nivel', color_discrete_map=color_map_smart
+)
+fig_smart_pie.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=450, font=dict(color='white'))
+st.plotly_chart(fig_smart_pie, use_container_width=True)
+
+# ==========================================
+# SECCIÓN 1.1: MANEJO DE LA ACTITUD Y CIERRE (COPY-PASTE EN OBJETIVOS)
+# ==========================================
+st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
+st.subheader("1.1. Objetivos, índice de Copy-Paste")
+st.markdown("<span style='color: #B7BCC9;'>Control de autorrepetición de objetivos (Copy-Paste).</span>", unsafe_allow_html=True)
+st.markdown("---")
+
+df_unique['Obj_Clean'] = df_unique[col_obj].fillna('').astype(str).str.strip().str.lower()
+df_unique['Rep_Obj_Count'] = df_unique.groupby([col_rep, 'Obj_Clean'])[col_visita].transform('count')
+
+palabras_prohibidas_rep = ['', '-', 'nan', 'none', 'nat', '0', 'ok', 'bien']
+
+def check_objetivo_repetido(row):
+    obj = row['Obj_Clean']
+    if obj in palabras_prohibidas_rep or len(obj) < 6: 
+        return False
+    return row['Rep_Obj_Count'] > 1
+
+df_unique['Es_Obj_Repetido'] = df_unique.apply(check_objetivo_repetido, axis=1)
+
+total_comentarios = len(df_unique)
+comentarios_repetidos = int(df_unique['Es_Obj_Repetido'].sum())
+pct_copia = (comentarios_repetidos / total_comentarios * 100) if total_comentarios > 0 else 0
+
+ckpi1, ckpi2, ckpi3 = st.columns(3)
+ckpi1.metric("Visitas Únicas Evaluadas", f"{total_comentarios:,}")
+ckpi2.metric("Objetivos Autorrepetidos", f"{comentarios_repetidos:,}")
+ckpi3.metric("% Índice Global Copy-Paste (Objetivos)", f"{pct_copia:.1f}%")
+st.markdown("---")
+
+rep_copia = df_unique.groupby(col_rep).agg(
+    Total_Visitas=(col_visita, 'count'), 
+    Comentarios_Repetidos=('Es_Obj_Repetido', lambda x: int(x.sum()))
+).reset_index()
+
+rep_copia.columns = ['Representante', 'Total_Visitas', 'Objetivos_Repetidos']
+rep_copia['Pct_Copia'] = (rep_copia['Objetivos_Repetidos'] / rep_copia['Total_Visitas'] * 100).round(1)
+rep_copia = rep_copia.sort_values(by='Pct_Copia', ascending=True)
+
+fig_bar_copia = px.bar(
+    rep_copia, x='Pct_Copia', y='Representante', text='Pct_Copia', template='plotly_dark',
+    title="<b>Índice de Copy-Paste en Objetivos (%) por Representante</b>",
+    color='Pct_Copia', color_continuous_scale=[[0.0, '#3DD6FF'], [0.4, '#7A2CFF'], [0.8, '#FF2D8F'], [1.0, '#9B2C2C']],
+    range_color=[0, 100], orientation='h'
+)
+fig_bar_copia.update_traces(texttemplate='%{text}%', textposition='outside', textfont_size=11)
+fig_bar_copia.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=max(450, len(rep_copia)*25), font=dict(color='white'))
+st.plotly_chart(fig_bar_copia, use_container_width=True)
 # ==========================================
 # SECCIÓN 2: PRESENTACIÓN DE BENEFICIOS (IMPACTOS Y AYUDAS VISUALES)
 # ==========================================
