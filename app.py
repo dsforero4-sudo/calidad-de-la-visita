@@ -446,3 +446,27 @@ if df_visitas is not None:
             fig_impactos = go.Figure()
             fig_impactos.add_trace(go.Bar(y=df_imp_agrupado['Producto'], x=df_imp_agrupado['Imp_Real'], name='Realizados', orientation='h', marker=dict(color='#3DD6FF'), text=df_imp_agrupado['Texto_Real'], textposition='inside'))
             fig_impactos.add_trace(go.Bar(y=df_imp_agrupado['Producto'], x=df_imp_agrupado['Imp_Pendiente'], name='Brecha Pendiente', orientation='h', marker=dict(color='#FF2D8F'), text=df_imp_agrupado['Texto_Total'], textposition='outside'))
+            fig_impactos.update_layout(template='plotly_dark', title="Top Impactos Promocionales: Realizados vs Esperados", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=450, barmode='stack', xaxis_title="Impactos Esperados", yaxis_title="Producto", font=dict(color='white'))
+            st.plotly_chart(fig_impactos, use_container_width=True)
+        else:
+            st.info("No hay registros de impactos bajo los filtros seleccionados.")
+    else:
+        st.info("Cargue el archivo de Impactos Promocionales en la barra lateral para visualizar los impactos promocionales.")
+
+    st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
+
+    # ==========================================
+    # SECCIÓN 3: ACTITUD FRENTE AL PORTAFOLIO
+    # ==========================================
+    st.subheader("3. Actitud Frente al Portafolio (Receptividad Médica)")
+    st.markdown("<span style='color: #B7BCC9;'>Identificación del comportamiento y actitud del cliente frente a la propuesta (Aceptación, Indiferencia, Objeción, Escepticismo).</span>", unsafe_allow_html=True)
+    st.markdown("---")
+    st.info("Módulo analítico en integración con los comentarios y la clasificación de respuestas de los profesionales de la salud.")
+
+    st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
+
+    # ==========================================
+    # SECCIÓN 4: MANEJO DE LA ACTITUD, PROPUESTA Y CIERRE
+    # ==========================================
+    st.subheader("4. Manejo de la Actitud, Propuesta y Cierre")
+    st.markdown("<span style='color: #B7BCC9;'>Evaluación de
