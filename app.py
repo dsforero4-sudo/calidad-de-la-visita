@@ -459,3 +459,60 @@ with col_b4:
     st.metric("Ayudas Visuales Promedio / Visita", f"{av_promedio:,.2f}")
 
 st.markdown("---")
+
+# Gráfico de Torta: Distribución de Impactos Promocionales por Producto
+st.markdown("### 🥧 Distribución de Impactos Promocionales por Producto")
+st.markdown("<span style='color: #B7BCC9;'>Participación porcentual de las marcas y productos promocionados en el campo.</span>", unsafe_allow_html=True)
+
+# Consolidación real de impactos por producto desde el archivo cargado o local
+if uploaded_impactos is not None or os.path.exists('Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx'):
+    try:
+        path_imp = uploaded_impactos if uploaded_impactos is not None else 'Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx'
+        df_imp_raw = pd.read_excel(path_imp, header=None)
+        
+        real_cols = [3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36, 39]
+        product_impacts = {}
+        
+        for r in range(11, len(df_imp_raw)):
+            prod = df_imp_raw.iloc[r, 1]
+            if pd.isna(prod):
+                continue
+            prod = str(prod).strip()
+            if prod == '' or prod == '-':
+                continue
+                
+            row_sum = 0
+            for c in real_cols:
+                val = df_imp_raw.iloc[r, c]
+                if pd.notna(val) and val != '-':
+                    try:
+                        row_sum += float(val)
+                    except:
+                        pass
+            if row_sum > 0:
+                product_impacts[prod] = product_impacts.get(prod, 0) + row_sum
+                
+        df_pie = pd.DataFrame(list(product_impacts.items()), columns=['Producto', 'Impactos'])
+        df_pie = df_pie.sort_values(by='Impactos', ascending=False)
+        
+        fig_pie_prod = px.pie(
+            df_pie, 
+            names='Producto', 
+            values='Impactos', 
+            hole=0.4, 
+            template='plotly_dark',
+            title="<b>Participación de Impactos Reales por Producto</b>"
+        )
+        fig_pie_prod.update_traces(textposition='inside', textinfo='percent+label')
+        fig_pie_prod.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)', 
+            plot_bgcolor='rgba(0,0,0,0)', 
+            height=480, 
+            font=dict(color='white')
+        )
+        st.plotly_chart(fig_pie_prod, use_container_width=True)
+        
+    except Exception as e:
+        st.error(f"No se pudo generar la torta de impactos: {e}")
+else:
+    st.info("💡 Carga el archivo de Impactos Promocionales en la barra lateral para visualizar la distribución por producto.")
