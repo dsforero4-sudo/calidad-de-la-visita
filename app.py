@@ -369,10 +369,10 @@ fig_smart_pie.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,
 st.plotly_chart(fig_smart_pie, use_container_width=True)
 
 # ==========================================
-# SECCIÓN 4: MANEJO DE LA ACTITUD Y CIERRE (COPY-PASTE EN OBJETIVOS)
+# SECCIÓN 1.1: MANEJO DE LA ACTITUD Y CIERRE (COPY-PASTE EN OBJETIVOS)
 # ==========================================
 st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
-st.subheader("4. Manejo de la Actitud, Propuesta y Cierre")
+st.subheader("1.1. Objetivos, índice de Copy-Paste")
 st.markdown("<span style='color: #B7BCC9;'>Control de autorrepetición de objetivos (Copy-Paste).</span>", unsafe_allow_html=True)
 st.markdown("---")
 
