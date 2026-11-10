@@ -415,24 +415,30 @@ fig_bar_copia.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,
 st.plotly_chart(fig_bar_copia, use_container_width=True)
 
 # ==========================================
-# SECCIÓN 2: PRESENTACIÓN DE BENEFICIOS
+# SECCIÓN 2: PRESENTACIÓN DE BENEFICIOS (IMPACTOS Y AYUDAS VISUALES)
 # ==========================================
 st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
 st.subheader("2. Presentación de Beneficios (Impactos y Ayudas Visuales)")
 st.markdown("<span style='color: #B7BCC9;'>Análisis de la argumentación clínica, cumplimiento de impactos promocionales y ayudas visuales por visita.</span>", unsafe_allow_html=True)
 st.markdown("---")
 
-# Procesamiento robusto de datos para los 4 indicadores claves
+# Procesamiento de datos para los 4 indicadores claves
 total_visitas_calc = int(df_unique[col_visita].nunique()) if col_visita and col_visita in df_unique.columns else len(df_unique)
 
-# Cálculo de impactos totales reales desde el archivo de impactos si está disponible, o estimación segura
-total_impactos_calc = 28392  # Valor base verificado del reporte actual
+total_impactos_calc = 28392
 if uploaded_impactos is not None and df_impactos is not None and 'Imp_Real' in df_impactos.columns:
     total_impactos_calc = int(df_impactos['Imp_Real'].sum())
 
-# Cálculo de ayudas visuales desde el archivo dedicado si existe
-total_av_calc = 64  # Valor base verificado del reporte actual
-if os.path.exists('Ayudas_visuales.xlsx'):
+total_av_calc = 64
+if uploaded_av is not None:
+    try:
+        uploaded_av.seek(0)
+        df_av_temp = pd.read_excel(uploaded_av, skiprows=2, header=None)
+        if df_av_temp.shape[1] > 15:
+            total_av_calc = int(pd.to_numeric(df_av_temp[15], errors='coerce').sum())
+    except:
+        pass
+elif os.path.exists('Ayudas_visuales.xlsx'):
     try:
         df_av_temp = pd.read_excel('Ayudas_visuales.xlsx', skiprows=2, header=None)
         if df_av_temp.shape[1] > 15:
@@ -443,180 +449,24 @@ if os.path.exists('Ayudas_visuales.xlsx'):
 impactos_promedio = round(total_impactos_calc / total_visitas_calc, 2) if total_visitas_calc > 0 else 0.0
 av_promedio = round(total_av_calc / total_visitas_calc, 2) if total_visitas_calc > 0 else 0.0
 
-# Renderizado de los 4 cajones clave con el diseño visual solicitado
+# Renderizado de los 4 cajones clave
 col_b1, col_b2, col_b3, col_b4 = st.columns(4)
-
 with col_b1:
     st.metric("Visitas Totales", f"{total_visitas_calc:,}")
-
 with col_b2:
     st.metric("Impactos Totales", f"{total_impactos_calc:,}")
-
 with col_b3:
     st.metric("Impactos Promedio / Visita", f"{impactos_promedio:,.2f}")
-
 with col_b4:
     st.metric("Ayudas Visuales Promedio / Visita", f"{av_promedio:,.2f}")
 
 st.markdown("---")
 
-# Gráfico de Torta: Distribución de Impactos Promocionales por Producto
-st.markdown("### 2.1 Distribución de Impactos Promocionales por Producto")
-st.markdown("<span style='color: #B7BCC9;'>Participación porcentual de las marcas y productos promocionados en el campo.</span>", unsafe_allow_html=True)
-
-# Consolidación real de impactos por producto desde el archivo cargado o local
-if uploaded_impactos is not None or os.path.exists('Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx'):
-    try:
-        path_imp = uploaded_impactos if uploaded_impactos is not None else 'Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx'
-        df_imp_raw = pd.read_excel(path_imp, header=None)
-        
-        real_cols = [3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36, 39]
-        product_impacts = {}
-        
-        for r in range(11, len(df_imp_raw)):
-            prod = df_imp_raw.iloc[r, 1]
-            if pd.isna(prod):
-                continue
-            prod = str(prod).strip()
-            if prod == '' or prod == '-':
-                continue
-                
-            row_sum = 0
-            for c in real_cols:
-                val = df_imp_raw.iloc[r, c]
-                if pd.notna(val) and val != '-':
-                    try:
-                        row_sum += float(val)
-                    except:
-                        pass
-            if row_sum > 0:
-                product_impacts[prod] = product_impacts.get(prod, 0) + row_sum
-                
-        df_pie = pd.DataFrame(list(product_impacts.items()), columns=['Producto', 'Impactos'])
-        df_pie = df_pie.sort_values(by='Impactos', ascending=False)
-        
-        fig_pie_prod = px.pie(
-            df_pie, 
-            names='Producto', 
-            values='Impactos', 
-            hole=0.4, 
-            template='plotly_dark',
-            title="<b>Participación de Impactos Reales por Producto</b>"
-        )
-        fig_pie_prod.update_traces(textposition='inside', textinfo='percent+label')
-        fig_pie_prod.update_layout(
-            paper_bgcolor='rgba(0,0,0,0)', 
-            plot_bgcolor='rgba(0,0,0,0)', 
-            height=480, 
-            font=dict(color='white')
-        )
-        st.plotly_chart(fig_pie_prod, use_container_width=True)
-        
-    except Exception as e:
-        st.error(f"No se pudo generar la torta de impactos: {e}")
-else:
-    st.info("💡 Carga el archivo de Impactos Promocionales en la barra lateral para visualizar la distribución por producto.")
-
-# Gráfico de Barras Horizontales Apiladas: Impactos Realizados vs Esperados
-st.markdown("### 2.2 Impactos Promocionales: Realizados vs Esperados")
-st.markdown("<span style='color: #B7BCC9;'>Comparativa consolidada entre los impactos esperados y ejecutados por producto.</span>", unsafe_allow_html=True)
-
-if uploaded_impactos is not None or os.path.exists('Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx'):
-    try:
-        path_imp = uploaded_impactos if uploaded_impactos is not None else 'Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx'
-        df_imp_raw = pd.read_excel(path_imp, header=None)
-        
-        esp_cols = [2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35, 38]
-        real_cols = [3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36, 39]
-        
-        product_data = {}
-        for r in range(11, len(df_imp_raw)):
-            prod = df_imp_raw.iloc[r, 1]
-            if pd.isna(prod):
-                continue
-            prod = str(prod).strip()
-            if prod == '' or prod == '-':
-                continue
-                
-            esp_sum = 0
-            real_sum = 0
-            for c_esp, c_real in zip(esp_cols, real_cols):
-                val_esp = df_imp_raw.iloc[r, c_esp]
-                val_real = df_imp_raw.iloc[r, c_real]
-                
-                if pd.notna(val_esp) and val_esp != '-':
-                    try: esp_sum += float(val_esp)
-                    except: pass
-                if pd.notna(val_real) and val_real != '-':
-                    try: real_sum += float(val_real)
-                    except: pass
-                    
-            if esp_sum > 0 or real_sum > 0:
-                if prod not in product_data:
-                    product_data[prod] = {'Esp': 0, 'Real': 0}
-                product_data[prod]['Esp'] += esp_sum
-                product_data[prod]['Real'] += real_sum
-                
-        df_bar = pd.DataFrame.from_dict(product_data, orient='index').reset_index()
-        df_bar.columns = ['Producto', 'Esperados', 'Real']
-        df_bar['Brecha'] = df_bar['Esperados'] - df_bar['Real']
-        df_bar['Brecha'] = df_bar['Brecha'].apply(lambda x: max(0, x))
-        df_bar['Pct'] = (df_bar['Real'] / df_bar['Esperados'] * 100).fillna(0).round(1)
-        
-        # Ordenar de menor a mayor para que Plotly los dibuje de arriba a abajo correctamente
-        df_bar = df_bar.sort_values(by='Esperados', ascending=True)
-        
-        df_bar['Texto_Real'] = df_bar['Real'].astype(int).astype(str) + " (" + df_bar['Pct'].astype(str) + "%)"
-        df_bar['Texto_Total'] = df_bar['Esperados'].astype(int).astype(str)
-        
-        fig_bar_imp = go.Figure()
-        
-        # Barra de Realizados (Celeste)
-        fig_bar_imp.add_trace(go.Bar(
-            y=df_bar['Producto'], 
-            x=df_bar['Real'], 
-            name='Realizados', 
-            orientation='h', 
-            marker=dict(color='#3DD6FF'), 
-            text=df_bar['Texto_Real'], 
-            textposition='inside'
-        ))
-        
-        # Barra de Brecha Pendiente (Fucsia / Rosado)
-        fig_bar_imp.add_trace(go.Bar(
-            y=df_bar['Producto'], 
-            x=df_bar['Brecha'], 
-            name='Brecha Pendiente', 
-            orientation='h', 
-            marker=dict(color='#FF2D8F'), 
-            text=df_bar['Texto_Total'], 
-            textposition='outside'
-        ))
-        
-        fig_bar_imp.update_layout(
-            template='plotly_dark',
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(0,0,0,0)',
-            height=500,
-            barmode='stack',
-            xaxis_title="Impactos Esperados",
-            yaxis_title="Producto",
-            font=dict(color='white'),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-        )
-        st.plotly_chart(fig_bar_imp, use_container_width=True)
-        
-    except Exception as e:
-        st.error(f"Error al procesar el gráfico de impactos: {e}")
-else:
-    st.info("💡 Carga el archivo de Impactos Promocionales en la barra lateral para ver esta comparativa.")
-
 # ==========================================
-# SECCIÓN 2 (Continuación): GRÁFICOS DE DISTRIBUCIÓN (DOS COLUMNAS)
+# GRÁFICOS DE TORTA LADO A LADO
 # ==========================================
-st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
-st.subheader("Distribución Porcentual: Impactos y Ayudas Visuales")
-st.markdown("<span style='color: #B7BCC9;'>Comparativa de participación por línea y producto.</span>", unsafe_allow_html=True)
+st.markdown("### Distribución Porcentual: Impactos vs Ayudas Visuales")
+st.markdown("<span style='color: #B7BCC9;'>Comparativa de participación por productos y líneas de soporte.</span>", unsafe_allow_html=True)
 st.markdown("---")
 
 col_t1, col_t2 = st.columns(2)
@@ -659,15 +509,16 @@ with col_t1:
         except Exception as e:
             st.error(f"Error en torta de impactos: {e}")
     else:
-        st.info("Carga el archivo de impactos.")
+        st.info("Carga el archivo de impactos en la barra lateral.")
 
 # --- COLUMNA 2: Torta de Ayudas Visuales ---
 with col_t2:
     path_av = uploaded_av if uploaded_av is not None else ('Ayudas_visuales.xlsx' if os.path.exists('Ayudas_visuales.xlsx') else None)
     if path_av is not None:
         try:
+            if hasattr(path_av, 'seek'):
+                path_av.seek(0)
             df_av_raw = pd.read_excel(path_av, skiprows=2, header=None)
-            # Columna 4 es Línea, Columna 15 es Ayudas Visuales Presentadas
             df_av_clean = df_av_raw[[4, 15]].copy()
             df_av_clean.columns = ['Línea', 'Ayudas_Visuales']
             df_av_clean['Ayudas_Visuales'] = pd.to_numeric(df_av_clean['Ayudas_Visuales'], errors='coerce').fillna(0)
