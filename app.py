@@ -280,7 +280,7 @@ st.markdown("---")
 
 if df_visitas is not None:
     col_obj_texto = buscar_columna(df_visitas, ['Objetivo', 'Objetivo de visita', 'Meta', 'Propósito'])
-    col_calificacion = buscar_columna(df_visitas, ['Calificación SMART', 'Calificacion', 'Evaluación Objetivo', 'Score'])
+    col_calificacion = buscar_columna(df_visitas, ['Calificación SMART', 'Calificacion', 'Calificación', 'Evaluación', 'Evaluación Objetivo', 'Score', 'Estado', 'Validez', 'Validación'])
     col_argumento = buscar_columna(df_visitas, ['Argumentación', 'Argumentacion', 'Justificación', 'Comentario Objetivo', 'Motivo'])
     col_rep = buscar_columna(df_visitas, ['Representante', 'Usuario', 'Asesor', 'Ejecutivo'])
     col_copypaste = buscar_columna(df_visitas, ['Copy Paste', 'Copy-Paste', 'Índice Copy Paste', 'Indice Copy-Paste'])
@@ -293,7 +293,7 @@ if df_visitas is not None:
     
     validados_count = 0
     if col_calificacion and col_calificacion in df_visitas.columns:
-        validados_count = int(df_visitas[col_calificacion].astype(str).str.lower().isin(['cumple', 'valido', 'sí', 'si', 'aprobado']).sum())
+        validados_count = int(df_visitas[col_calificacion].astype(str).str.lower().isin(['cumple', 'valido', 'válido', 'sí', 'si', 'aprobado', 'ok', 'smart']).sum())
     
     col_obj2.metric("Objetivos Validados (SMART)", f"{validados_count:,}")
     col_obj3.metric("Objetivos por Mejorar / Pendientes", f"{total_v - validados_count:,}")
@@ -304,7 +304,6 @@ if df_visitas is not None:
     st.markdown("### 1.1. Distribución de Calificación de Objetivos")
     st.markdown("<span style='color: #B7BCC9;'>Proporción general de los objetivos evaluados según su cumplimiento metodológico y exportable de sustentación.</span>", unsafe_allow_html=True)
 
-    # Creamos dos columnas: izquierda para la torta, derecha para la tarjeta con el resumen y el botón de exportación integrado
     col_torta, col_export_box = st.columns([1.8, 1.2])
 
     with col_torta:
@@ -363,7 +362,6 @@ if df_visitas is not None:
         st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("---")
-
     # --- 2. SEGUNDA GRÁFICA: BARRAS POR REPRESENTANTE CON ÍNDICE DE COPY-PASTE ---
     st.markdown("### 1.2. Índice de Copy-Paste por Representante")
     st.markdown("<span style='color: #B7BCC9;'>Análisis del porcentaje o índice de objetivos repetidos (copy-paste) por cada representante.</span>", unsafe_allow_html=True)
