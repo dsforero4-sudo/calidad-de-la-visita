@@ -23,7 +23,8 @@ def verificar_password():
     if st.session_state["password_correcta"]:
         return True
 
-    st.markdown("""
+    st.markdown(
+        """
         <style>
         .stApp { background: #0E1118 !important; color: #FFFFFF !important; }
         .login-card { 
@@ -35,14 +36,19 @@ def verificar_password():
         }
         .login-title { color: #FF2D8F; font-size: 26px; font-weight: bold; margin-bottom: 10px; }
         </style>
-    """, unsafe_allow_html=True)
+        """, 
+        unsafe_allow_html=True
+    )
 
-    st.markdown("""
+    st.markdown(
+        """
         <div class="login-card">
             <div class="login-title">Pharm<span style="color: #3DD6FF;">Advisor</span></div>
             <p style="color: #B7BCC9; font-size: 14px;">Acceso Restringido - Validador Metodológico y Calidad de Visita</p>
         </div>
-    """, unsafe_allow_html=True)
+        """, 
+        unsafe_allow_html=True
+    )
     
     col_l1, col_l2, col_l3 = st.columns([1, 1.2, 1])
     with col_l2:
@@ -61,7 +67,8 @@ if not verificar_password():
 # ==========================================
 # APLICACIÓN PRINCIPAL
 # ==========================================
-st.markdown("""
+st.markdown(
+    """
     <style>
     html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main, .block-container {
         background-color: #0E1118 !important;
@@ -131,9 +138,12 @@ st.markdown("""
         font-weight: bold !important;
     }
     </style>
-""", unsafe_allow_html=True)
+    """, 
+    unsafe_allow_html=True
+)
 
-st.markdown("""
+st.markdown(
+    """
     <div class="ph-header">
         <div>
             <h1 class="ph-title">Evaluación de la Calidad de la Visita - Pharmadvisor</h1>
@@ -143,7 +153,9 @@ st.markdown("""
             <span style="color: #FF2D8F; font-weight: bold; font-size: 20px;">Pharm<span style="color: #3DD6FF;">Advisor</span></span>
         </div>
     </div>
-""", unsafe_allow_html=True)
+    """, 
+    unsafe_allow_html=True
+)
 
 st.sidebar.subheader("1. Carga de Reportes")
 uploaded_file = st.sidebar.file_uploader("Cargar Listado de Visitas (.xlsx)", type=["xlsx"], key="visitas_validador")
@@ -252,44 +264,4 @@ if df_visitas is not None:
         cols_lower = {str(c).lower().strip(): c for c in df.columns}
         for p in posibles_nombres:
             if p.lower().strip() in cols_lower:
-                return cols_lower[p.lower().strip()]
-        return None
-
-    col_reg = buscar_columna(df_visitas, ['Región', 'Region', 'Coordinación', 'Coordinacion', 'Distrito', 'Zona'])
-    col_ciclo = buscar_columna(df_visitas, ['Ciclo', 'Periodo', 'Mes'])
-    col_lin = buscar_columna(df_visitas, ['Línea', 'Linea', 'Estrategia'])
-    col_rep = buscar_columna(df_visitas, ['Representante', 'Asesor', 'Ejecutivo'])
-    col_visita = buscar_columna(df_visitas, ['Cod. visita', 'Cod visita', 'Código visita', 'Codigo visita', 'Id visita', 'Visita'])
-    col_fecha = buscar_columna(df_visitas, ['Fecha visita', 'Fecha', 'Date'])
-    col_hora = buscar_columna(df_visitas, ['Hora digitado', 'Hora', 'Time'])
-    col_med = buscar_columna(df_visitas, ['Nombre farmacia o cliente', 'Farmacia', 'Médicos', 'Medicos', 'Cliente', 'Institución', 'Institucion', 'Nombre'])
-    col_obj = buscar_columna(df_visitas, ['Objetivo', 'Obj', 'Objetivos'])
-    col_com = buscar_columna(df_visitas, ['Comentario', 'Comentarios', 'Observación', 'Observacion'])
-    col_acomp = buscar_columna(df_visitas, ['Visita acompañada', 'Visita acompanada', 'Acompañada', 'Acompañamiento'])
-    col_muestra = buscar_columna(df_visitas, ['Material entregado', 'Muestra', 'Muestras'])
-    col_cant_muestra = buscar_columna(df_visitas, ['Cantidad de material', 'Cantidad', 'Cant'])
-    col_impacto_prod = buscar_columna(df_visitas, ['Impactos', 'Impacto', 'Producto'])
-
-    # Respaldos seguros si alguna columna clave no se detecta automáticamente
-    if not col_visita:
-        col_visita = df_visitas.columns[0]
-    if not col_rep:
-        col_rep = df_visitas.columns[0]
-    if not col_reg:
-        df_visitas['Región_Default'] = 'Nacional'
-        col_reg = 'Región_Default'
-    if not col_ciclo:
-        df_visitas['Ciclo_Default'] = 'Ciclo Único'
-        col_ciclo = 'Ciclo_Default'
-    if not col_lin:
-        df_visitas['Linea_Default'] = 'General'
-        col_lin = 'Linea_Default'
-    if not col_com:
-        df_visitas['Comentario'] = '-'
-        col_com = 'Comentario'
-    if not col_obj:
-        df_visitas['Objetivo'] = '-'
-        col_obj = 'Objetivo'
-
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("3.
+                return cols_lower
