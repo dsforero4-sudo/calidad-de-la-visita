@@ -807,7 +807,6 @@ if df_visitas is not None:
             fig_promo_pie.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=400, font=dict(color='white'))
             st.plotly_chart(fig_promo_pie, use_container_width=True)
         else:
-            # Mockup simulado para la presentación si la columna exacta no está mapeada todavía
             df_mock_promo = pd.DataFrame({'Estado': ['Con Elemento Promocional', 'Sin Elemento Promocional'], 'Total': [74.5, 25.5]})
             fig_promo_pie = px.pie(
                 df_mock_promo, names='Estado', values='Total', hole=0.4,
@@ -865,7 +864,6 @@ if df_visitas is not None:
         )
         st.plotly_chart(fig_bar_cat, use_container_width=True)
     else:
-        # Mockup estructurado con las 9 categorías oficiales para la presentación de alto impacto
         import numpy as np
         np.random.seed(42)
         mock_cat_df = pd.DataFrame({
@@ -925,7 +923,6 @@ if df_visitas is not None:
         )
         st.plotly_chart(fig_bar_act, use_container_width=True)
     else:
-        # Mockup simulado para la actitud médica
         mock_act_df = pd.DataFrame({
             'Actitud': actitudes_oficiales,
             'Entregado': [88.5, 72.0, 55.4, 40.1, 30.2]
@@ -933,7 +930,7 @@ if df_visitas is not None:
         mock_act_df['No Entregado'] = 100 - mock_act_df['Entregado']
 
         fig_mock_act = go.Figure()
-        fig_mock_act.add_trace(go.Bar(y=mock_act_df['Actitud'], x=mock_act_df['Entregado'], name='Entregado', orientation='h', text=mock_mock_act_text := mock_act_df['Entregado'].round(1).astype(str)+'%', textposition='inside'))
+        fig_mock_act.add_trace(go.Bar(y=mock_act_df['Actitud'], x=mock_act_df['Entregado'], name='Entregado', orientation='h', text=mock_act_df['Entregado'].round(1).astype(str)+'%', textposition='inside'))
         fig_mock_act.add_trace(go.Bar(y=mock_act_df['Actitud'], x=mock_act_df['No Entregado'], name='No Entregado', orientation='h', text=mock_act_df['No Entregado'].round(1).astype(str)+'%', textposition='inside'))
 
         fig_mock_act.update_layout(
