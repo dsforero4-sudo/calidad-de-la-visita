@@ -945,3 +945,7 @@ if df_visitas is not None:
 
 else:
     st.info("👈 Por favor carga el **Listado de Visitas** en la barra lateral para habilitar los indicadores de la Sección 4.")
+
+if st.button("🖨️ Preparar Vista para Imprimir / Guardar PDF"):
+    st.balloons()
+    st.info("Presiona las teclas **Ctrl + P** (o **Cmd + P** en Mac) en tu teclado y selecciona la opción **'Guardar como PDF'** en el destino de impresión.")
