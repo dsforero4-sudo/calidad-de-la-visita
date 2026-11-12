@@ -772,3 +772,179 @@ if col_impacto and col_impacto in df_visitas.columns:
         st.info("No se encontró la columna de productos para generar la gráfica apilada.")
 else:
     st.warning("⚠️ No se encontró la columna 'Comentario de Impacto' en el archivo de visitas cargado.")
+
+# ==========================================
+# SECCIÓN 4: MANEJO DE LA ACTITUD, PROPUESTA Y CIERRE
+# ==========================================
+st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
+st.subheader("4. Manejo de la Actitud, Propuesta y Cierre")
+st.markdown("<span style='color: #B7BCC9;'>Evaluación táctica de la entrega de elementos promocionales frente a la categorización del panel y la receptividad médica.</span>", unsafe_allow_html=True)
+st.markdown("---")
+
+if df_visitas is not None:
+    
+    # ------------------------------------------
+    # 4.1. Torta: % Panel Visitado con Elemento Promocional
+    # ------------------------------------------
+    st.markdown("### 4.1. Cobertura de Elementos Promocionales en Visitas")
+    st.markdown("<span style='color: #B7BCC9;'>Proporción de contactos visitados que recibieron al menos un elemento o ayuda promocional.</span>", unsafe_allow_html=True)
+
+    col_promo = buscar_columna(df_visitas, ['Elemento Promocional', 'Promocional', 'Material', 'Ayuda Visual', 'Entregó Material', 'Material Entregado'])
+    
+    col_mock_torta, col_mock_info = st.columns([1.8, 1.2])
+    
+    with col_mock_torta:
+        if col_promo and col_promo in df_visitas.columns:
+            df_visitas['Tiene_Promo'] = df_visitas[col_promo].apply(lambda x: 'Con Elemento Promocional' if pd.notna(x) and str(x).strip() not in ['', '-', '0', 'nan', 'No'] else 'Sin Elemento Promocional')
+            df_promo_counts = df_visitas['Tiene_Promo'].value_counts().reset_index()
+            df_promo_counts.columns = ['Estado_Promo', 'Total']
+            
+            fig_promo_pie = px.pie(
+                df_promo_counts, names='Estado_Promo', values='Total', hole=0.4,
+                template='plotly_dark', title="<b>Visitas con Entrega de Material Promocional</b>"
+            )
+            fig_promo_pie.update_traces(textposition='inside', textinfo='percent+label')
+            fig_promo_pie.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=400, font=dict(color='white'))
+            st.plotly_chart(fig_promo_pie, use_container_width=True)
+        else:
+            # Mockup simulado para la presentación si la columna exacta no está mapeada todavía
+            df_mock_promo = pd.DataFrame({'Estado': ['Con Elemento Promocional', 'Sin Elemento Promocional'], 'Total': [74.5, 25.5]})
+            fig_promo_pie = px.pie(
+                df_mock_promo, names='Estado', values='Total', hole=0.4,
+                template='plotly_dark', title="<b>Cobertura Promocional (Simulado Gerencial)</b>"
+            )
+            fig_promo_pie.update_traces(textposition='inside', textinfo='percent+label')
+            fig_promo_pie.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=400, font=dict(color='white'))
+            st.plotly_chart(fig_promo_pie, use_container_width=True)
+
+    with col_mock_info:
+        st.markdown("<div style='background-color: #161B22; padding: 20px; border-radius: 10px; border: 1px solid #30363D;'>", unsafe_allow_html=True)
+        st.markdown("##### 💡 Insight Clave para el Cliente")
+        st.markdown("<span style='color: #B7BCC9; font-size: 14px;'>Este indicador permite medir el rigor táctico de los representantes al asociar material promocional en cada visita, clave para justificar la inversión en portafolio ante la dirección médica.</span>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ------------------------------------------
+    # 4.2. Barras Apiladas al 100% por Categoría del Panel
+    # ------------------------------------------
+    st.markdown("### 4.2. Entrega Promocional por Categoría del Panel")
+    st.markdown("<span style='color: #B7BCC9;'>Distribución porcentual (Entregado vs. No Entregado) a lo largo de las 9 categorías del panel.</span>", unsafe_allow_html=True)
+
+    categorias_panel_oficial = [
+        "1. Defender+", "2. Desarrollar +", "3. Conquistar +", 
+        "4. Defender", "5. Desarrollar", "6. Conquistar", 
+        "7. Mantener", "8. Evaluar", "9. Olvidar"
+    ]
+
+    col_cat_panel = buscar_columna(df_visitas, ['Categoría Panel', 'Categoria Panel', 'Clasificación', 'Segmento', 'Categoría'])
+
+    if col_cat_panel and col_cat_panel in df_visitas.columns:
+        df_cat_data = df_visitas.copy()
+        df_cat_data['Cat_Clean'] = df_cat_data[col_cat_panel].astype(str).str.strip()
+        df_cat_data['Promo_Status'] = df_cat_data[col_promo].apply(lambda x: 'Entregado' if pd.notna(x) and str(x).strip() not in ['', '-', '0', 'nan', 'No'] else 'No Entregado') if col_promo in df_cat_data.columns else 'Entregado'
+
+        df_cat_pivot = pd.crosstab(df_cat_data['Cat_Clean'], df_cat_data['Promo_Status'], normalize='index') * 100
+        df_cat_pivot = df_cat_pivot.reset_index()
+
+        fig_bar_cat = go.Figure()
+        for col_name in df_cat_pivot.columns:
+            if col_name != 'Cat_Clean':
+                fig_bar_cat.add_trace(go.Bar(
+                    y=df_cat_pivot['Cat_Clean'], x=df_cat_pivot[col_name],
+                    name=col_name, orientation='h',
+                    text=df_cat_pivot[col_name].round(1).astype(str) + '%',
+                    textposition='inside'
+                ))
+        fig_bar_cat.update_layout(
+            barmode='stack', template='plotly_dark',
+            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=450,
+            xaxis=dict(title="Porcentaje (%)", range=[0, 100]),
+            yaxis=dict(title="Categoría del Panel", categoryorder='array', categoryarray=categorias_panel_oficial),
+            font=dict(color='white'), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        )
+        st.plotly_chart(fig_bar_cat, use_container_width=True)
+    else:
+        # Mockup estructurado con las 9 categorías oficiales para la presentación de alto impacto
+        import numpy as np
+        np.random.seed(42)
+        mock_cat_df = pd.DataFrame({
+            'Categoria': categorias_panel_oficial,
+            'Entregado': np.random.uniform(60, 95, len(categorias_panel_oficial))
+        })
+        mock_cat_df['No Entregado'] = 100 - mock_cat_df['Entregado']
+
+        fig_mock_cat = go.Figure()
+        fig_mock_cat.add_trace(go.Bar(y=mock_cat_df['Categoria'], x=mock_cat_df['Entregado'], name='Entregado', orientation='h', text=mock_cat_df['Entregado'].round(1).astype(str)+'%', textposition='inside'))
+        fig_mock_cat.add_trace(go.Bar(y=mock_cat_df['Categoria'], x=mock_cat_df['No Entregado'], name='No Entregado', orientation='h', text=mock_cat_df['No Entregado'].round(1).astype(str)+'%', textposition='inside'))
+        
+        fig_mock_cat.update_layout(
+            barmode='stack', template='plotly_dark',
+            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=480,
+            xaxis=dict(title="Porcentaje (%)", range=[0, 100]),
+            yaxis=dict(title="Categoría del Panel", categoryorder='array', categoryarray=categorias_panel_oficial),
+            font=dict(color='white'), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            title="<b>Adherencia Promocional por Categoría de Panel (Simulado Gerencial)</b>"
+        )
+        st.plotly_chart(fig_mock_cat, use_container_width=True)
+
+    st.markdown("---")
+
+    # ------------------------------------------
+    # 4.3. Barras Apiladas al 100% por Actitud del Médico
+    # ------------------------------------------
+    st.markdown("### 4.3. Correlación: Actitud Médica vs. Entrega Promocional")
+    st.markdown("<span style='color: #B7BCC9;'>Comparativa porcentual del uso de material promocional segmentada según la actitud registrada del médico.</span>", unsafe_allow_html=True)
+
+    actitudes_oficiales = ["Aceptación", "Escepticismo", "Evasivo", "Indiferencia por no necesario", "Sin sondeo"]
+
+    if col_impacto and col_impacto in df_visitas.columns:
+        df_act_data = df_visitas.copy()
+        df_act_data['Actitud_Clean'] = df_act_data[col_impacto].fillna('Sin sondeo').astype(str).str.strip()
+        df_act_data['Actitud_Clean'] = df_act_data['Actitud_Clean'].replace(['-', '', 'nan', 'none', 'NaN'], 'Sin sondeo')
+        df_act_data['Promo_Status'] = df_act_data[col_promo].apply(lambda x: 'Entregado' if pd.notna(x) and str(x).strip() not in ['', '-', '0', 'nan', 'No'] else 'No Entregado') if col_promo in df_act_data.columns else 'Entregado'
+
+        df_act_pivot = pd.crosstab(df_act_data['Actitud_Clean'], df_act_data['Promo_Status'], normalize='index') * 100
+        df_act_pivot = df_act_pivot.reset_index()
+
+        fig_bar_act = go.Figure()
+        for col_name in df_act_pivot.columns:
+            if col_name != 'Actitud_Clean':
+                fig_bar_act.add_trace(go.Bar(
+                    y=df_act_pivot['Actitud_Clean'], x=df_act_pivot[col_name],
+                    name=col_name, orientation='h',
+                    text=df_act_pivot[col_name].round(1).astype(str) + '%',
+                    textposition='inside'
+                ))
+        fig_bar_act.update_layout(
+            barmode='stack', template='plotly_dark',
+            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=400,
+            xaxis=dict(title="Porcentaje (%)", range=[0, 100]),
+            yaxis=dict(title="Actitud del Médico"),
+            font=dict(color='white'), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        )
+        st.plotly_chart(fig_bar_act, use_container_width=True)
+    else:
+        # Mockup simulado para la actitud médica
+        mock_act_df = pd.DataFrame({
+            'Actitud': actitudes_oficiales,
+            'Entregado': [88.5, 72.0, 55.4, 40.1, 30.2]
+        })
+        mock_act_df['No Entregado'] = 100 - mock_act_df['Entregado']
+
+        fig_mock_act = go.Figure()
+        fig_mock_act.add_trace(go.Bar(y=mock_act_df['Actitud'], x=mock_act_df['Entregado'], name='Entregado', orientation='h', text=mock_mock_act_text := mock_act_df['Entregado'].round(1).astype(str)+'%', textposition='inside'))
+        fig_mock_act.add_trace(go.Bar(y=mock_act_df['Actitud'], x=mock_act_df['No Entregado'], name='No Entregado', orientation='h', text=mock_act_df['No Entregado'].round(1).astype(str)+'%', textposition='inside'))
+
+        fig_mock_act.update_layout(
+            barmode='stack', template='plotly_dark',
+            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=400,
+            xaxis=dict(title="Porcentaje (%)", range=[0, 100]),
+            yaxis=dict(title="Actitud del Médico", categoryorder='array', categoryarray=actitudes_oficiales),
+            font=dict(color='white'), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            title="<b>Actitud vs. Entrega de Elementos Promocionales (Simulado Gerencial)</b>"
+        )
+        st.plotly_chart(fig_mock_act, use_container_width=True)
+
+else:
+    st.info("👈 Por favor carga el **Listado de Visitas** en la barra lateral para habilitar los indicadores de la Sección 4.")
