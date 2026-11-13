@@ -685,35 +685,38 @@ if col_impacto and col_impacto in df_visitas.columns:
         fig_pie_actitud.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=420, font=dict(color='white'), showlegend=False)
         st.plotly_chart(fig_pie_actitud, use_container_width=True)
 
-    # Torta 2: Nivel de Adopción (Desde el archivo de Consulta Detallada de Contactos)
+    # Torta 2: Nivel de Adopción (Desde el archivo cargado en la barra lateral)
     with col_t2:
-        # Carga automática del archivo recién adjuntado si existe
-        path_panel = 'Consulta_Detallada_de_Contactos_V2_para_Médicos_2026-11-10_11_41_45.xlsx'
+        # Usamos el archivo cargado desde la barra lateral (uploaded_panel) o el respaldo local si existe
+        path_panel = uploaded_panel if uploaded_panel is not None else ('Consulta_Detallada_de_Contactos_V2_para_Médicos_2026-11-10_11_41_45.xlsx' if os.path.exists('Consulta_Detallada_de_Contactos_V2_para_Médicos_2026-11-10_11_41_45.xlsx') else None)
+        
         df_panel_loaded = None
-        if os.path.exists(path_panel):
+        if path_panel is not None:
             try:
+                if hasattr(path_panel, 'seek'):
+                    path_panel.seek(0)
+                # Leemos con header=10 tal como viene la estructura de este reporte de contactos
                 df_panel_loaded = pd.read_excel(path_panel, header=10)
-            except:
+            except Exception as e:
                 pass
                 
         if df_panel_loaded is not None:
-            # La columna 'Nivel de Adopción' viene en la última columna o con encabezado 'Nivel de Adopción'
+            # Buscamos la columna de Nivel de Adopción de manera inteligente
             col_adop = None
             for c in df_panel_loaded.columns:
                 val_sample = str(df_panel_loaded[c].iloc[0]).strip().lower() if len(df_panel_loaded) > 0 else ""
-                if 'nivel de adopción' in str(c).lower() or 'adopción' in val_sample or 'nivel' in val_sample:
+                if 'nivel de adopción' in str(c).lower() or 'adopción' in str(c).lower() or 'nivel' in val_sample:
                     col_adop = c
                     break
             if col_adop is None and len(df_panel_loaded.columns) >= 15:
-                col_adop = df_panel_loaded.columns[14] # Columna FZ / Nivel de Adopción típica
+                col_adop = df_panel_loaded.columns[14] # Columna estándar de Nivel de Adopción
 
             if col_adop is not None:
-                df_panel_clean = df_panel_loaded.iloc[1:].copy() # Omitir fila de encabezados duplicados si los hay
+                df_panel_clean = df_panel_loaded.iloc[1:].copy()
                 df_panel_clean['Adopcion_Clean'] = df_panel_clean[col_adop].fillna('Sin Nivel').astype(str).str.strip()
                 df_adop_counts = df_panel_clean['Adopcion_Clean'].value_counts().reset_index()
                 df_adop_counts.columns = ['Nivel_Adopcion', 'Total']
-                # Filtrar encabezados residuales si los hubiera
-                df_adop_counts = df_adop_counts[df_adop_counts['Nivel_Adopcion'] != 'Nivel de Adopción']
+                df_adop_counts = df_adop_counts[~df_adop_counts['Nivel_Adopcion'].isin(['Nivel de Adopción', 'nan', 'NAN'])]
 
                 fig_pie_adop = px.pie(
                     df_adop_counts, names='Nivel_Adopcion', values='Total', 
@@ -724,12 +727,9 @@ if col_impacto and col_impacto in df_visitas.columns:
                 fig_pie_adop.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=420, font=dict(color='white'), showlegend=False)
                 st.plotly_chart(fig_pie_adop, use_container_width=True)
             else:
-                st.info("💡 No se encontró la columna de Nivel de Adopción en el archivo.")
+                st.info("💡 No se encontró la columna de Nivel de Adopción en el archivo cargado.")
         else:
-            st.info("💡 Coloque el archivo de Consulta Detallada de Contactos en la ruta del proyecto para visualizar el Nivel de Adopción.")
-
-    st.markdown("---")
-
+            st.info("💡 Por favor cargue el archivo de Consulta Detallada de Contactos en la barra lateral.")
     # --- GRÁFICA DE BARRAS HORIZONTALES APILADAS AL 100% (ORDENADAS POR ESPERADOS) ---
     st.markdown("### 📊 Distribución Porcentual de Actitud por Producto")
     st.markdown("<span style='color: #B7BCC9;'>Comparativa 100% apilada ordenada por volumen de Impactos Esperados.</span>", unsafe_allow_html=True)
