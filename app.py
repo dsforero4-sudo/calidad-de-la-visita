@@ -510,46 +510,59 @@ with col_t1:
     else:
         st.info("Carga el archivo de impactos en la barra lateral.")
 
-# --- COLUMNA 2: Torta de Ayudas Visuales por Producto / Marca ---
+# --- COLUMNA 2: Torta de Ayudas Visuales ---
+
 with col_t2:
+
     path_av = uploaded_av if uploaded_av is not None else ('Ayudas_visuales.xlsx' if os.path.exists('Ayudas_visuales.xlsx') else None)
+
     if path_av is not None:
+
         try:
+
             if hasattr(path_av, 'seek'):
+
                 path_av.seek(0)
+
             df_av_raw = pd.read_excel(path_av, skiprows=2, header=None)
+
+            df_av_clean = df_av_raw[[4, 15]].copy()
+
+            df_av_clean.columns = ['Línea', 'Ayudas_Visuales']
+
+            df_av_clean['Ayudas_Visuales'] = pd.to_numeric(df_av_clean['Ayudas_Visuales'], errors='coerce').fillna(0)
+
             
-            # Ajustamos las columnas para extraer el producto/marca y la cantidad de ayudas visuales
-            col_prod_av = 1 if df_av_raw.shape[1] > 1 else 0
-            col_val_av = 15 if df_av_raw.shape[1] > 15 else df_av_raw.shape[1] - 1
-            
-            df_av_clean = pd.DataFrame({
-                'Producto': df_av_raw.iloc[11:, col_prod_av] if len(df_av_raw) > 11 else df_av_raw.iloc[:, col_prod_av],
-                'Ayudas_Visuales': pd.to_numeric(df_av_raw.iloc[11:, col_val_av] if len(df_av_raw) > 11 else df_av_raw.iloc[:, col_val_av], errors='coerce').fillna(0)
-            })
-            
-            df_av_clean['Producto'] = df_av_clean['Producto'].astype(str).str.strip()
-            df_av_clean = df_av_clean[~df_av_clean['Producto'].isin(['nan', '', '-', 'Total', 'NAN', 'None'])]
-            
-            df_av_group = df_av_clean.groupby('Producto', as_index=False)['Ayudas_Visuales'].sum()
+
+            df_av_group = df_av_clean.groupby('Línea', as_index=False)['Ayudas_Visuales'].sum()
+
             df_av_group = df_av_group[df_av_group['Ayudas_Visuales'] > 0]
+
             
-            if not df_av_group.empty:
-                fig_pie_av = px.pie(
-                    df_av_group, names='Producto', values='Ayudas_Visuales', 
-                    hole=0.4, template='plotly_dark', 
-                    title="<b>Ayudas Visuales por Producto / Marca</b>"
-                )
-                fig_pie_av.update_traces(textposition='inside', textinfo='percent+label')
-                fig_pie_av.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=420, font=dict(color='white'), showlegend=False)
-                st.plotly_chart(fig_pie_av, use_container_width=True)
-            else:
-                st.info("No se encontraron registros de productos en el archivo de Ayudas Visuales.")
+
+            fig_pie_av = px.pie(
+
+                df_av_group, names='Línea', values='Ayudas_Visuales', 
+
+                hole=0.4, template='plotly_dark', 
+
+                title="<b>Ayudas Visuales por Línea</b>"
+
+            )
+
+            fig_pie_av.update_traces(textposition='inside', textinfo='percent+label')
+
+            fig_pie_av.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=420, font=dict(color='white'), showlegend=False)
+
+            st.plotly_chart(fig_pie_av, use_container_width=True)
+
         except Exception as e:
+
             st.error(f"Error en torta de ayudas visuales: {e}")
+
     else:
-        st.info("Carga el archivo de Ayudas Visuales en la barra lateral.")
-# ==========================================
+
+        st.info("Carga el archivo de Ayudas Visuales en la barra lateral.") # ==========================================
 # GRÁFICO DE BARRAS HORIZONTALES (ÚLTIMA POSICIÓN)
 # ==========================================
 st.markdown("### Top Impactos Promocionales: Realizados vs Esperados")
