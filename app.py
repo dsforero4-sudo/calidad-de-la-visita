@@ -862,22 +862,20 @@ if df_visitas is not None:
     st.markdown("---")
 
     # ------------------------------------------
+    # ------------------------------------------
     # 4.2. Barras Apiladas al 100% por Categoría del Panel
     # ------------------------------------------
     st.markdown("### 4.2. Entrega Promocional por Categoría del Panel")
-    st.markdown("<span style='color: #B7BCC9;'>Distribución porcentual (Entregado vs. No Entregado) a lo largo de las 9 categorías del panel.</span>", unsafe_allow_html=True)
+    st.markdown("<span style='color: #B7BCC9;'>Distribución porcentual (Entregado vs. No Entregado) a lo largo de las categorías del panel.</span>", unsafe_allow_html=True)
 
-    categorias_panel_oficial = [
-        "1. Defender+", "2. Desarrollar +", "3. Conquistar +", 
-        "4. Defender", "5. Desarrollar", "6. Conquistar", 
-        "7. Mantener", "8. Evaluar", "9. Olvidar"
-    ]
+    # Orden exacto solicitado de arriba hacia abajo
+    categorias_ordenadas = ["AAA", "AA", "A", "BBB", "BB", "B", "CCC", "CC", "C"]
 
     col_cat_panel = buscar_columna(df_visitas, ['Categoría Panel', 'Categoria Panel', 'Clasificación', 'Segmento', 'Categoría'])
 
     if col_cat_panel and col_cat_panel in df_visitas.columns:
         df_cat_data = df_visitas.copy()
-        df_cat_data['Cat_Clean'] = df_cat_data[col_cat_panel].astype(str).str.strip()
+        df_cat_data['Cat_Clean'] = df_cat_data[col_cat_panel].astype(str).str.strip().str.upper()
         df_cat_data['Promo_Status'] = df_cat_data[col_promo].apply(lambda x: 'Entregado' if pd.notna(x) and str(x).strip() not in ['', '-', '0', 'nan', 'No'] else 'No Entregado') if col_promo in df_cat_data.columns else 'Entregado'
 
         df_cat_pivot = pd.crosstab(df_cat_data['Cat_Clean'], df_cat_data['Promo_Status'], normalize='index') * 100
@@ -894,9 +892,10 @@ if df_visitas is not None:
                 ))
         fig_bar_cat.update_layout(
             barmode='stack', template='plotly_dark',
-            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=450,
+            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=480,
             xaxis=dict(title="Porcentaje (%)", range=[0, 100]),
-            yaxis=dict(title="Categoría del Panel", categoryorder='array', categoryarray=categorias_panel_oficial),
+            # Forzamos el orden de arriba hacia abajo invirtiendo el array para que Plotly lo pinte correcto
+            yaxis=dict(title="Categoría del Panel", categoryorder='array', categoryarray=categorias_ordenadas[::-1]),
             font=dict(color='white'), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
         )
         st.plotly_chart(fig_bar_cat, use_container_width=True)
@@ -904,8 +903,8 @@ if df_visitas is not None:
         import numpy as np
         np.random.seed(42)
         mock_cat_df = pd.DataFrame({
-            'Categoria': categorias_panel_oficial,
-            'Entregado': np.random.uniform(60, 95, len(categorias_panel_oficial))
+            'Categoria': categorias_ordenadas,
+            'Entregado': np.random.uniform(10, 30, len(categorias_ordenadas))
         })
         mock_cat_df['No Entregado'] = 100 - mock_cat_df['Entregado']
 
@@ -917,14 +916,12 @@ if df_visitas is not None:
             barmode='stack', template='plotly_dark',
             paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=480,
             xaxis=dict(title="Porcentaje (%)", range=[0, 100]),
-            yaxis=dict(title="Categoría del Panel", categoryorder='array', categoryarray=categorias_panel_oficial),
+            # Invertimos el array con [::-1] para que en Plotly queden en el orden exacto de arriba hacia abajo
+            yaxis=dict(title="Categoría del Panel", categoryorder='array', categoryarray=categorias_ordenadas[::-1]),
             font=dict(color='white'), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-            title="<b>Adherencia Promocional por Categoría de Panel (Simulado Gerencial)</b>"
+            title="<b>Adherencia Promocional por Categoría de Panel</b>"
         )
         st.plotly_chart(fig_mock_cat, use_container_width=True)
-
-    st.markdown("---")
-
     # ------------------------------------------
     # 4.3. Barras Apiladas al 100% por Actitud del Médico
     # ------------------------------------------
