@@ -1167,19 +1167,9 @@ if _df_base_45 is not None and _df_uniq_45 is not None:
             if filtro_rep_sel != 'Todos' and '_Rep_Audit' in df_tabla_filtrada.columns:
                 df_tabla_filtrada = df_tabla_filtrada[df_tabla_filtrada['_Rep_Audit'] == filtro_rep_sel]
 
-            st.markdown(f"<span style='color: #00D26A; font-size: 13px;'>Mostrando {len(df_tabla_filtrada):,} registros filtrados.</span>", unsafe_allow_html=True)
+            col_nombres_med = buscar_columna(_df_base_45, ['Nombres', 'Nombre'])
+            if col_nombres_med is None and len(_df_base_45.columns) > 14:
+                col_nombres_med = _df_base_45.columns[14]  # Columna O
 
-            cols_mostrar = [c for c in [
-                '_Rep_Audit', col_cod_v, col_fecha_v, col_med_v,
-                col_comentario_v, 'Calidad_Comentario', 'Justificacion_Comentario',
-                col_objetivo_w, 'Calidad_Objetivo', 'Justificacion_Objetivo',
-                'Estado_Metodologico'
-            ] if c and c in df_tabla_filtrada.columns]
-
-            st.dataframe(df_tabla_filtrada[cols_mostrar], use_container_width=True, hide_index=True)
-    else:
-        st.warning("⚠️ No se pudieron localizar las columnas de Comentario y Objetivo en el archivo cargado.")
-else:
-    st.info("👈 Carga el **Listado de Visitas** en la barra lateral para ejecutar la auditoría metodológica.")
-
-st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
+            col_apellidos_med = buscar_columna(_df_base_45, ['Apellidos', 'Apellido'])
+            if col_apellidos_med is None and len
