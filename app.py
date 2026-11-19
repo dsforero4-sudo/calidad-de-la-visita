@@ -655,6 +655,11 @@ with col_t2:
             df_av_clean.columns = ["Línea", "Ayudas_Visuales"]
             df_av_clean["Línea"] = df_av_clean["Línea"].fillna("").astype(str).str.strip()
             df_av_clean = df_av_clean[df_av_clean["Línea"] != ""].copy()
+
+            # Excluir filas de resumen/totales (ej. "Total", "TOTAL", "Total general")
+            es_fila_total = df_av_clean["Línea"].str.lower().str.startswith("total")
+            df_av_clean = df_av_clean[~es_fila_total].copy()
+
             df_av_clean["Ayudas_Visuales"] = pd.to_numeric(df_av_clean["Ayudas_Visuales"], errors="coerce").fillna(0.0)
 
             df_av_group = df_av_clean.groupby("Línea", as_index=False)["Ayudas_Visuales"].sum()
