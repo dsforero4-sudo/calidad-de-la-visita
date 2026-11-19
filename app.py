@@ -1312,3 +1312,110 @@ if _df_base_45 is not None and _df_uniq_45 is not None:
         st.warning("⚠️ No se pudieron localizar las columnas de Comentario y Objetivo en el archivo cargado.")
 else:
     st.info("👈 Carga el **Listado de Visitas** en la barra lateral para ejecutar la auditoría metodológica.")
+
+
+# ==========================================
+# SECCIÓN 5: HÁBITO DE REPORTE
+# ==========================================
+st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
+st.subheader("5. Hábito de reporte")
+st.markdown(
+    "<span style='color: #B7BCC9;'>Análisis de los patrones temporales de digitación y reporte de visitas en campo.</span>",
+    unsafe_allow_html=True,
+)
+st.markdown("---")
+
+# ------------------------------------------
+# 5.1. Franja horaria
+# ------------------------------------------
+st.markdown("### 5.1. Franja horaria")
+st.markdown(
+    "<span style='color: #9AA5B1;'>Distribución de visitas únicas según la franja del día en que se reportan: Mañana (6:00 a. m. - 12:00 p. m.), Tarde (12:00 p. m. - 6:00 p. m.) y Noche (después de las 6:00 p. m.).</span>",
+    unsafe_allow_html=True,
+)
+
+_df_51 = df_unique.copy() if "df_unique" in locals() and df_unique is not None else None
+
+if _df_51 is not None and len(_df_51) > 0:
+    col_hora_51 = buscar_columna(
+        _df_51,
+        ["Hora digitado", "Hora de digitado", "Hora reporte", "Hora de reporte", "Hora", "Time"],
+    )
+    col_fecha_51 = buscar_columna(
+        _df_51,
+        ["Fecha visita", "Fecha de visita", "Fecha digitado", "Fecha"],
+    )
+
+    horas_extraidas = pd.Series([pd.NA] * len(_df_51), index=_df_51.index)
+
+    if col_hora_51 and col_hora_51 in _df_51.columns:
+        raw_h = _df_51[col_hora_51]
+        # Si ya viene como datetime.time o Timestamp
+        dt_from_time = pd.to_datetime(raw_h.astype(str), format="%H:%M:%S", errors="coerce")
+        dt_from_hm = dt_from_time.fillna(pd.to_datetime(raw_h.astype(str), format="%H:%M", errors="coerce"))
+        dt_from_any = dt_from_hm.fillna(pd.to_datetime(raw_h, errors="coerce"))
+        horas_extraidas = dt_from_any.dt.hour
+
+    if horas_extraidas.isna().all() and col_fecha_51 and col_fecha_51 in _df_51.columns:
+        dt_fecha = pd.to_datetime(_df_51[col_fecha_51], errors="coerce")
+        horas_extraidas = dt_fecha.dt.hour
+
+    def clasificar_franja(h):
+        if pd.isna(h):
+            return "Sin hora registrada"
+        h_int = int(h)
+        if 6 <= h_int < 12:
+            return "Mañana"
+        if 12 <= h_int < 18:
+            return "Tarde"
+        return "Noche"
+
+    _df_51["Franja_Horaria"] = horas_extraidas.apply(clasificar_franja)
+    df_franja_validas = _df_51[_df_51["Franja_Horaria"] != "Sin hora registrada"]
+
+    if len(df_franja_validas) > 0:
+        orden_franjas = ["Mañana", "Tarde", "Noche"]
+        df_franja_counts = (
+            df_franja_validas["Franja_Horaria"]
+            .value_counts()
+            .reindex(orden_franjas, fill_value=0)
+            .reset_index()
+        )
+        df_franja_counts.columns = ["Franja_Horaria", "Total"]
+
+        colores_franja = {
+            "Mañana": "#00CC96",
+            "Tarde": "#F39C12",
+            "Noche": "#FF2D8F",
+        }
+
+        fig_51_pie = px.pie(
+            df_franja_counts,
+            names="Franja_Horaria",
+            values="Total",
+            hole=0.45,
+            template="plotly_dark",
+            title="<b>Distribución de Visitas Únicas por Franja Horaria de Reporte</b>",
+            color="Franja_Horaria",
+            color_discrete_map=colores_franja,
+            category_orders={"Franja_Horaria": orden_franjas},
+        )
+        fig_51_pie.update_traces(
+            textposition="inside",
+            textinfo="percent+label+value",
+            direction="clockwise",
+            rotation=90,
+            textfont_color="white",
+        )
+        fig_51_pie.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            height=430,
+            font=dict(color="white"),
+            legend_title="Franja Horaria",
+        )
+        st.plotly_chart(fig_51_pie, use_container_width=True)
+    else:
+        st.info("💡 No se encontró información de hora válida en el archivo de visitas para clasificar las franjas horarias.")
+else:
+    st.info("👈 Carga el **Listado de Visitas** en la barra lateral para visualizar la franja horaria de reporte.")
