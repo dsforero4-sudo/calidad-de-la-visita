@@ -992,6 +992,8 @@ st.markdown("---")
 
 st.markdown("---")
 
+st.markdown("---")
+
 # ------------------------------------------
 # 4.4. Compromisos (Espacio reservado para próxima fase)
 # ------------------------------------------
@@ -1042,10 +1044,10 @@ if _df_base_45 is not None and _df_uniq_45 is not None:
         def calificar_y_justificar_comentario_flexible(txt, es_rep):
             t_low = str(txt).lower().strip()
             if t_low in palabras_prohibidas_com or len(str(txt).strip()) < 8:
-                return '🔴 Alerta: Vacío o Genérico', 'El comentario está vacío o usa expresiones genéricas ("bien", "ok", "sin novedad").'
+                return 'Alerta: Vacío o Genérico', 'El comentario está vacío o usa expresiones genéricas ("bien", "ok", "sin novedad").'
 
             if bool(es_rep):
-                return '🔴 Alerta: Penalizado por Copy-Paste (Clonación)', 'El texto contiene elementos teóricos correctos, pero al estar repetido idénticamente en múltiples visitas, se invalida por falta de exploración individual genuina.'
+                return 'Alerta: Penalizado por Copy-Paste (Clonación)', 'El texto contiene elementos teóricos correctos, pero al estar repetido idénticamente en múltiples visitas, se invalida por falta de exploración individual genuina.'
 
             palabras_alta_calidad = [
                 'acepta', 'indiferente', 'objeción', 'objecion', 'escepticismo', 'evasivo', 'acuerdo',
@@ -1053,22 +1055,22 @@ if _df_base_45 is not None and _df_uniq_45 is not None:
                 'revisa', 'revisó', 'conoce', 'conoció', 'prescribe', 'prescribirá'
             ]
             if any(w in t_low for w in palabras_alta_calidad):
-                return '🟢 Alta Calidad (Técnica Aplicada)', 'El comentario evidencia de forma sólida la Fase 2 y es un registro único y personalizado.'
+                return 'Alta Calidad (Técnica Aplicada)', 'El comentario evidencia de forma sólida la Fase 2 y es un registro único y personalizado.'
             else:
-                return '🟡 Regular (Superficial / Sin Actitud Clara)', 'El texto relata la visita pero carece de profundidad y argumentación diferencial.'
+                return 'Regular (Superficial / Sin Actitud Clara)', 'El texto relata la visita pero carece de profundidad y argumentación diferencial.'
 
         palabras_actividades = ['entregar', 'visitar', 'saludar', 'llamar', 'dejar', 'muestra', 'material', 'obsequio']
 
         def calificar_y_justificar_objetivo(txt):
             t_low = str(txt).lower().strip()
             if t_low in palabras_prohibidas_com or len(str(txt).strip()) < 8:
-                return '🔴 Alerta: Sin Objetivo Definido', 'El campo de objetivo está vacío o no especifica el comportamiento esperado.'
+                return 'Alerta: Sin Objetivo Definido', 'El campo de objetivo está vacío o no especifica el comportamiento esperado.'
             elif any(t_low.startswith(act) for act in palabras_actividades):
-                return '🔴 Alerta: Confunde Actividad con Objetivo', 'Describe una tarea logística en lugar de definir un comportamiento clínico SMART.'
+                return 'Alerta: Confunde Actividad con Objetivo', 'Describe una tarea logística en lugar de definir un comportamiento clínico SMART.'
             elif any(w in t_low for w in ['iniciar', 'reiniciar', 'aumentar', 'sostener', 'mantener', 'reemplazar', 'posicionar', 'evaluar', 'prescripción', 'uso']):
-                return '🟢 Alta Calidad (Comportamental SMART)', 'El objetivo está formulado correctamente como un cambio de comportamiento prescriptivo.'
+                return 'Alta Calidad (Comportamental SMART)', 'El objetivo está formulado correctamente como un cambio de comportamiento prescriptivo.'
             else:
-                return '🟡 Regular (Objetivo Poco Específico)', 'El objetivo menciona una intención pero carece de la precisión requerida.'
+                return 'Regular (Objetivo Poco Específico)', 'El objetivo menciona una intención pero carece de la precisión requerida.'
 
         res_com = [calificar_y_justificar_comentario_flexible(row['Com_Text'], row['Es_Repetido']) for _, row in df_audit_tec.iterrows()]
         df_audit_tec['Calidad_Comentario'] = [r[0] for r in res_com]
@@ -1082,17 +1084,17 @@ if _df_base_45 is not None and _df_uniq_45 is not None:
             c = row['Calidad_Comentario']
             o = row['Calidad_Objetivo']
             if 'Alerta' in c or 'Alerta' in o:
-                return '🔴 Riesgo Metodológico (Alerta)'
+                return 'Riesgo Metodológico (Alerta)'
             elif 'Regular' in c or 'Regular' in o:
-                return '🟡 En Proceso de Apropiación'
+                return 'En Proceso de Apropiación'
             else:
-                return '🟢 Visita Sobresaliente (Metodología Dominada)'
+                return 'Visita Sobresaliente (Metodología Dominada)'
 
         df_audit_tec['Estado_Metodologico'] = df_audit_tec.apply(calificacion_global, axis=1)
 
         total_v_audit = len(df_audit_tec)
-        sobresalientes = len(df_audit_tec[df_audit_tec['Estado_Metodologico'] == '🟢 Visita Sobresaliente (Metodología Dominada)'])
-        alertas = len(df_audit_tec[df_audit_tec['Estado_Metodologico'] == '🔴 Riesgo Metodológico (Alerta)'])
+        sobresalientes = len(df_audit_tec[df_audit_tec['Estado_Metodologico'] == 'Visita Sobresaliente (Metodología Dominada)'])
+        alertas = len(df_audit_tec[df_audit_tec['Estado_Metodologico'] == 'Riesgo Metodológico (Alerta)'])
 
         m1, m2, m3 = st.columns(3)
         m1.metric("Visitas Únicas Evaluadas (Técnica)", f"{total_v_audit:,}")
@@ -1130,9 +1132,9 @@ if _df_base_45 is not None and _df_uniq_45 is not None:
                 text='Texto_Barra',
                 template='plotly_dark', title="<b>Adopción de la Técnica de Ventas por Representante (Penalización Estricta por Copia)</b>",
                 color_discrete_map={
-                    '🟢 Visita Sobresaliente (Metodología Dominada)': '#00CC96',
-                    '🟡 En Proceso de Apropiación': '#F39C12',
-                    '🔴 Riesgo Metodológico (Alerta)': '#FF2D8F'
+                    'Visita Sobresaliente (Metodología Dominada)': '#00CC96',
+                    'En Proceso de Apropiación': '#F39C12',
+                    'Riesgo Metodológico (Alerta)': '#FF2D8F'
                 },
                 orientation='h'
             )
