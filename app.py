@@ -2015,30 +2015,22 @@ if _df_52 is not None and len(_df_52) > 0:
 else:
     st.info("👈 Carga el **Listado de Visitas** en la barra lateral para visualizar este indicador.")
 
-import io
-import zipfile
-
-st.markdown("### Exportar gráficas en HTML")
-
-figuras_detectadas = {}
-for _var_name, _var_val in list(locals().items()):
-    if _var_name.startswith("fig") and hasattr(_var_val, "to_html"):
-        figuras_detectadas[f"{_var_name}.html"] = _var_val
-
-if figuras_detectadas:
-    _zip_buf = io.BytesIO()
-    with zipfile.ZipFile(_zip_buf, "w", zipfile.ZIP_DEFLATED) as _zf:
-        for _fname, _fig in figuras_detectadas.items():
-            _html = _fig.to_html(full_html=True, include_plotlyjs="cdn")
-            _zf.writestr(_fname, _html.encode("utf-8"))
-    _zip_buf.seek(0)
-
-    st.download_button(
-        label=f"⬇️ Descargar {len(figuras_detectadas)} gráficas en HTML (.zip)",
-        data=_zip_buf,
-        file_name="graficas_auditoria_html.zip",
-        mime="application/zip",
-        key="btn_export_graficas_html_directo",
-    )
-else:
-    st.info("Aún no se detectan figuras de Plotly generadas en esta vista.")
+st.markdown(
+    """
+    <style>
+    @media print {
+        [data-testid="stSidebar"],
+        [data-testid="stToolbar"],
+        .stButton,
+        .stDownloadButton {
+            display: none !important;
+        }
+        .block-container {
+            max-width: 100% !important;
+            padding-top: 1rem !important;
+        }
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
