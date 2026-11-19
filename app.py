@@ -586,6 +586,9 @@ with col_t1:
             df_pie_imp["Producto"] = df_pie_imp["Producto"].astype(str).str.strip()
             df_pie_imp = df_pie_imp[df_pie_imp["Producto"] != ""].copy()
 
+            # Orden descendente de mayor a menor impacto
+            df_pie_imp = df_pie_imp.sort_values(by="Impactos", ascending=False).reset_index(drop=True)
+
             paleta_donas_av = [
                 "#00CC96",  # Esmeralda
                 "#FF2D8F",  # Fucsia
@@ -601,10 +604,10 @@ with col_t1:
                 "#FB7185",  # Rosa salmón
             ]
 
-            productos_unicos = list(dict.fromkeys(df_pie_imp["Producto"].tolist()))
+            productos_ordenados = df_pie_imp["Producto"].tolist()
             mapa_colores_prod = {
                 prod: paleta_donas_av[i % len(paleta_donas_av)]
-                for i, prod in enumerate(productos_unicos)
+                for i, prod in enumerate(productos_ordenados)
             }
 
             fig_pie_prod = px.pie(
@@ -616,9 +619,10 @@ with col_t1:
                 title="<b>Impactos por Producto</b>",
                 color="Producto",
                 color_discrete_map=mapa_colores_prod,
-                category_orders={"Producto": productos_unicos},
+                category_orders={"Producto": productos_ordenados},
             )
             fig_pie_prod.update_traces(
+                sort=False,
                 textposition="outside",
                 textinfo="percent+label",
                 direction="clockwise",
