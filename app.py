@@ -1419,3 +1419,88 @@ if _df_51 is not None and len(_df_51) > 0:
         st.info("💡 No se encontró información de hora válida en el archivo de visitas para clasificar las franjas horarias.")
 else:
     st.info("👈 Carga el **Listado de Visitas** en la barra lateral para visualizar la franja horaria de reporte.")
+
+# ------------------------------------------
+# 5.2. Oportunidad de reporte (Enfoque 1: Dona por brecha de días)
+# ------------------------------------------
+st.markdown("### 5.2. Oportunidad de reporte en el sistema")
+st.markdown(
+    "<span style='color: #9AA5B1;'>Proporción de visitas únicas digitadas el mismo día de su realización frente a registros con desfase en días.</span>",
+    unsafe_allow_html=True,
+)
+
+_df_52 = df_unique.copy() if "df_unique" in locals() and df_unique is not None else None
+
+if _df_52 is not None and len(_df_52) > 0:
+    col_fv_52 = buscar_columna(_df_52, ["Fecha Visita", "Fecha visita", "Fecha de visita", "Fecha"])
+    col_fd_52 = buscar_columna(_df_52, ["Fecha digitado", "Fecha Digitado", "Fecha de digitado", "Fecha registro"])
+
+    if col_fv_52 and col_fd_52 and col_fv_52 in _df_52.columns and col_fd_52 in _df_52.columns:
+        _f_vis = pd.to_datetime(_df_52[col_fv_52], errors="coerce").dt.normalize()
+        _f_dig = pd.to_datetime(_df_52[col_fd_52], errors="coerce").dt.normalize()
+        _dias = (_f_dig - _f_vis).dt.days
+
+        def clasificar_oportunidad(d):
+            if pd.isna(d):
+                return "Sin fecha válida"
+            d_int = int(d)
+            if d_int <= 0:
+                return "Mismo día (0 días)"
+            if d_int == 1:
+                return "1 día después"
+            if 2 <= d_int <= 3:
+                return "2 a 3 días después"
+            return "4+ días después"
+
+        _df_52["Oportunidad_Reporte"] = _dias.apply(clasificar_oportunidad)
+        df_op_validas = _df_52[_df_52["Oportunidad_Reporte"] != "Sin fecha válida"]
+
+        if len(df_op_validas) > 0:
+            orden_op = ["Mismo día (0 días)", "1 día después", "2 a 3 días después", "4+ días después"]
+            df_op_counts = (
+                df_op_validas["Oportunidad_Reporte"]
+                .value_counts()
+                .reindex(orden_op, fill_value=0)
+                .reset_index()
+            )
+            df_op_counts.columns = ["Oportunidad_Reporte", "Total"]
+
+            colores_op = {
+                "Mismo día (0 días)": "#00CC96",
+                "1 día después": "#F39C12",
+                "2 a 3 días después": "#3DD6FF",
+                "4+ días después": "#FF2D8F",
+            }
+
+            fig_52_pie = px.pie(
+                df_op_counts,
+                names="Oportunidad_Reporte",
+                values="Total",
+                hole=0.45,
+                template="plotly_dark",
+                title="<b>Oportunidad de Digitado: Mismo Día vs. Rezagos</b>",
+                color="Oportunidad_Reporte",
+                color_discrete_map=colores_op,
+                category_orders={"Oportunidad_Reporte": orden_op},
+            )
+            fig_52_pie.update_traces(
+                textposition="inside",
+                textinfo="percent+label+value",
+                direction="clockwise",
+                rotation=90,
+                textfont_color="white",
+            )
+            fig_52_pie.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                height=430,
+                font=dict(color="white"),
+                legend_title="Oportunidad de Reporte",
+            )
+            st.plotly_chart(fig_52_pie, use_container_width=True, key="chart_52_enfoque1")
+        else:
+            st.info("💡 No se encontraron fechas válidas para calcular la oportunidad de digitado.")
+    else:
+        st.info("💡 No se localizaron las columnas 'Fecha Visita' y 'Fecha digitado' en el archivo.")
+else:
+    st.info("👈 Carga el **Listado de Visitas** en la barra lateral para visualizar este indicador.")
