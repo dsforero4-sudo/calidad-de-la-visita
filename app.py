@@ -1421,11 +1421,11 @@ else:
     st.info("👈 Carga el **Listado de Visitas** en la barra lateral para visualizar la franja horaria de reporte.")
 
 # ------------------------------------------
-# 5.2. Oportunidad de reporte (Enfoque 1: Dona por brecha de días)
+# 5.2. Oportunidad de reporte en el sistema
 # ------------------------------------------
 st.markdown("### 5.2. Oportunidad de reporte en el sistema")
 st.markdown(
-    "<span style='color: #9AA5B1;'>Proporción de visitas únicas digitadas el mismo día de su realización frente a registros con desfase en días.</span>",
+    "<span style='color: #9AA5B1;'>Proporción de visitas únicas digitadas el mismo día de su realización frente a registros con desfase en días, y cumplimiento por representante.</span>",
     unsafe_allow_html=True,
 )
 
@@ -1434,6 +1434,7 @@ _df_52 = df_unique.copy() if "df_unique" in locals() and df_unique is not None e
 if _df_52 is not None and len(_df_52) > 0:
     col_fv_52 = buscar_columna(_df_52, ["Fecha Visita", "Fecha visita", "Fecha de visita", "Fecha"])
     col_fd_52 = buscar_columna(_df_52, ["Fecha digitado", "Fecha Digitado", "Fecha de digitado", "Fecha registro"])
+    col_rep_52 = buscar_columna(_df_52, ["Representante", "Usuario", "Asesor", "Ejecutivo"])
 
     if col_fv_52 and col_fd_52 and col_fv_52 in _df_52.columns and col_fd_52 in _df_52.columns:
         _f_vis = pd.to_datetime(_df_52[col_fv_52], errors="coerce").dt.normalize()
@@ -1453,7 +1454,7 @@ if _df_52 is not None and len(_df_52) > 0:
             return "4+ días después"
 
         _df_52["Oportunidad_Reporte"] = _dias.apply(clasificar_oportunidad)
-        df_op_validas = _df_52[_df_52["Oportunidad_Reporte"] != "Sin fecha válida"]
+        df_op_validas = _df_52[_df_52["Oportunidad_Reporte"] != "Sin fecha válida"].copy()
 
         if len(df_op_validas) > 0:
             orden_op = ["Mismo día (0 días)", "1 día después", "2 a 3 días después", "4+ días después"]
@@ -1485,7 +1486,7 @@ if _df_52 is not None and len(_df_52) > 0:
             )
             fig_52_pie.update_traces(
                 textposition="inside",
-                textinfo="percent+label+value",
+                textinfo="percent",
                 direction="clockwise",
                 rotation=90,
                 textfont_color="white",
@@ -1497,7 +1498,66 @@ if _df_52 is not None and len(_df_52) > 0:
                 font=dict(color="white"),
                 legend_title="Oportunidad de Reporte",
             )
-            st.plotly_chart(fig_52_pie, use_container_width=True, key="chart_52_enfoque1")
+            st.plotly_chart(fig_52_pie, use_container_width=True, key="chart_52_dona")
+
+            # Gráfica complementaria: 100% apilada por representante
+            if col_rep_52 and col_rep_52 in df_op_validas.columns:
+                st.markdown("#### Cumplimiento de reporte el mismo día por representante")
+                st.markdown(
+                    "<span style='color: #9AA5B1;'>Porcentaje de visitas únicas reportadas el mismo día frente a las reportadas en días posteriores por representante.</span>",
+                    unsafe_allow_html=True,
+                )
+
+                _dias_val = _dias.loc[df_op_validas.index]
+                df_op_validas["_Rep_52"] = (
+                    df_op_validas[col_rep_52].fillna("Sin Representante").astype(str).str.strip()
+                )
+                df_op_validas["_Estado_Dia"] = _dias_val.apply(
+                    lambda d: "Mismo día" if int(d) <= 0 else "Días posteriores"
+                )
+
+                df_ct_52 = (
+                    pd.crosstab(df_op_validas["_Rep_52"], df_op_validas["_Estado_Dia"], normalize="index")
+                    * 100
+                )
+                for est in ["Mismo día", "Días posteriores"]:
+                    if est not in df_ct_52.columns:
+                        df_ct_52[est] = 0.0
+                df_ct_52 = df_ct_52.sort_values(by="Mismo día", ascending=True).reset_index()
+
+                fig_52_bar = go.Figure()
+                for est, col_hex in [("Mismo día", "#00CC96"), ("Días posteriores", "#FF2D8F")]:
+                    vals = df_ct_52[est].round(1)
+                    txts = [f"{v:.1f}%" if v >= 5.0 else "" for v in vals]
+                    fig_52_bar.add_trace(
+                        go.Bar(
+                            y=df_ct_52["_Rep_52"],
+                            x=vals,
+                            name=est,
+                            orientation="h",
+                            marker=dict(color=col_hex),
+                            text=txts,
+                            textposition="inside",
+                            insidetextanchor="middle",
+                            textfont=dict(color="white", size=11),
+                        )
+                    )
+
+                n_reps_52 = df_ct_52["_Rep_52"].nunique()
+                fig_52_bar.update_layout(
+                    barmode="stack",
+                    template="plotly_dark",
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    plot_bgcolor="rgba(0,0,0,0)",
+                    height=max(450, n_reps_52 * 25),
+                    xaxis=dict(title="Porcentaje de Visitas Únicas (%)", range=[0, 100]),
+                    yaxis=dict(title="Representante"),
+                    font=dict(color="white"),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                    margin=dict(t=60, b=50, l=150, r=40),
+                    title="<b>Reporte en el Mismo Día (%) por Representante</b>",
+                )
+                st.plotly_chart(fig_52_bar, use_container_width=True, key="chart_52_rep")
         else:
             st.info("💡 No se encontraron fechas válidas para calcular la oportunidad de digitado.")
     else:
