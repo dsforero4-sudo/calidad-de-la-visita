@@ -1175,66 +1175,134 @@ if df_visitas is not None:
 
     st.markdown("---")
     # ------------------------------------------
-    # ------------------------------------------
     # 4.2. Barras Apiladas al 100% por Categoría del Panel
     # ------------------------------------------
     st.markdown("### 4.2. Entrega Promocional por Categoría del Panel")
-    st.markdown("<span style='color: #B7BCC9;'>Distribución porcentual (Entregado vs. No Entregado) a lo largo de las categorías del panel.</span>", unsafe_allow_html=True)
+    st.markdown(
+        "<span style='color: #B7BCC9;'>Distribución porcentual (Entregado vs. No Entregado) a lo largo de las categorías del panel.</span>",
+        unsafe_allow_html=True,
+    )
 
-    # Orden exacto solicitado de arriba hacia abajo
-    categorias_ordenadas = ["AAA", "AA", "A", "BBB", "BB", "B", "CCC", "CC", "C"]
+    colores_42 = {
+        "Entregado": "#00CC96",
+        "No Entregado": "#FF2D8F",
+    }
+    categorias_ordenadas = ["TOP", "AAA", "AA", "A", "BBB", "BB", "B", "CCC", "CC", "C"]
 
-    col_cat_panel = buscar_columna(df_visitas, ['Categoría Panel', 'Categoria Panel', 'Clasificación', 'Segmento', 'Categoría'])
+    col_cat_panel = buscar_columna(
+        df_visitas,
+        ["Categoría Panel", "Categoria Panel", "Clasificación", "Segmento", "Categoría"],
+    )
 
     if col_cat_panel and col_cat_panel in df_visitas.columns:
         df_cat_data = df_visitas.copy()
-        df_cat_data['Cat_Clean'] = df_cat_data[col_cat_panel].astype(str).str.strip().str.upper()
-        df_cat_data['Promo_Status'] = df_cat_data[col_promo].apply(lambda x: 'Entregado' if pd.notna(x) and str(x).strip() not in ['', '-', '0', 'nan', 'No'] else 'No Entregado') if col_promo in df_cat_data.columns else 'Entregado'
+        df_cat_data["Cat_Clean"] = df_cat_data[col_cat_panel].fillna("").astype(str).str.strip().str.upper()
+        df_cat_data = df_cat_data[df_cat_data["Cat_Clean"] != ""].copy()
 
-        df_cat_pivot = pd.crosstab(df_cat_data['Cat_Clean'], df_cat_data['Promo_Status'], normalize='index') * 100
-        df_cat_pivot = df_cat_pivot.reset_index()
+        if col_promo and col_promo in df_cat_data.columns:
+            df_cat_data["Promo_Status"] = df_cat_data[col_promo].apply(
+                lambda x: "Entregado"
+                if pd.notna(x) and str(x).strip().lower() not in ["", "-", "0", "nan", "none", "no", "sin material"]
+                else "No Entregado"
+            )
+        else:
+            df_cat_data["Promo_Status"] = "No Entregado"
+
+        df_cat_pivot = (
+            pd.crosstab(df_cat_data["Cat_Clean"], df_cat_data["Promo_Status"], normalize="index") * 100
+        )
+        for estado_p in ["Entregado", "No Entregado"]:
+            if estado_p not in df_cat_pivot.columns:
+                df_cat_pivot[estado_p] = 0.0
+        df_cat_pivot = df_cat_pivot[["Entregado", "No Entregado"]].reset_index()
+
+        cats_presentes = df_cat_pivot["Cat_Clean"].tolist()
+        cats_orden_final = [c for c in categorias_ordenadas if c in cats_presentes] + [
+            c for c in cats_presentes if c not in categorias_ordenadas
+        ]
 
         fig_bar_cat = go.Figure()
-        for col_name in df_cat_pivot.columns:
-            if col_name != 'Cat_Clean':
-                fig_bar_cat.add_trace(go.Bar(
-                    y=df_cat_pivot['Cat_Clean'], x=df_cat_pivot[col_name],
-                    name=col_name, orientation='h',
-                    text=df_cat_pivot[col_name].round(1).astype(str) + '%',
-                    textposition='inside'
-                ))
+        for estado_p in ["Entregado", "No Entregado"]:
+            vals = df_cat_pivot[estado_p].round(1)
+            txts = [f"{v:.1f}%" if v >= 4.0 else "" for v in vals]
+            fig_bar_cat.add_trace(
+                go.Bar(
+                    y=df_cat_pivot["Cat_Clean"],
+                    x=vals,
+                    name=estado_p,
+                    orientation="h",
+                    marker=dict(color=colores_42[estado_p]),
+                    text=txts,
+                    textposition="inside",
+                    insidetextanchor="middle",
+                    textfont=dict(color="white", size=11),
+                )
+            )
+
         fig_bar_cat.update_layout(
-            barmode='stack', template='plotly_dark',
-            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=480,
+            barmode="stack",
+            template="plotly_dark",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            height=480,
             xaxis=dict(title="Porcentaje (%)", range=[0, 100]),
-            # Forzamos el orden de arriba hacia abajo invirtiendo el array para que Plotly lo pinte correcto
-            yaxis=dict(title="Categoría del Panel", categoryorder='array', categoryarray=categorias_ordenadas[::-1]),
-            font=dict(color='white'), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            yaxis=dict(
+                title="Categoría del Panel",
+                categoryorder="array",
+                categoryarray=cats_orden_final[::-1],
+            ),
+            font=dict(color="white"),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         )
-        st.plotly_chart(fig_bar_cat, use_container_width=True)
+        st.plotly_chart(fig_bar_cat, use_container_width=True, key="chart_42_promo_categoria")
     else:
         import numpy as np
+
         np.random.seed(42)
-        mock_cat_df = pd.DataFrame({
-            'Categoria': categorias_ordenadas,
-            'Entregado': np.random.uniform(10, 30, len(categorias_ordenadas))
-        })
-        mock_cat_df['No Entregado'] = 100 - mock_cat_df['Entregado']
+        cats_sim = ["AAA", "AA", "A", "BBB", "BB", "B", "CCC", "CC", "C"]
+        mock_cat_df = pd.DataFrame(
+            {
+                "Categoria": cats_sim,
+                "Entregado": np.random.uniform(10, 30, len(cats_sim)),
+            }
+        )
+        mock_cat_df["No Entregado"] = 100 - mock_cat_df["Entregado"]
 
         fig_mock_cat = go.Figure()
-        fig_mock_cat.add_trace(go.Bar(y=mock_cat_df['Categoria'], x=mock_cat_df['Entregado'], name='Entregado', orientation='h', text=mock_cat_df['Entregado'].round(1).astype(str)+'%', textposition='inside'))
-        fig_mock_cat.add_trace(go.Bar(y=mock_cat_df['Categoria'], x=mock_cat_df['No Entregado'], name='No Entregado', orientation='h', text=mock_cat_df['No Entregado'].round(1).astype(str)+'%', textposition='inside'))
-        
+        for estado_p in ["Entregado", "No Entregado"]:
+            vals = mock_cat_df[estado_p].round(1)
+            txts = [f"{v:.1f}%" if v >= 4.0 else "" for v in vals]
+            fig_mock_cat.add_trace(
+                go.Bar(
+                    y=mock_cat_df["Categoria"],
+                    x=vals,
+                    name=estado_p,
+                    orientation="h",
+                    marker=dict(color=colores_42[estado_p]),
+                    text=txts,
+                    textposition="inside",
+                    insidetextanchor="middle",
+                    textfont=dict(color="white", size=11),
+                )
+            )
+
         fig_mock_cat.update_layout(
-            barmode='stack', template='plotly_dark',
-            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=480,
+            barmode="stack",
+            template="plotly_dark",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            height=480,
             xaxis=dict(title="Porcentaje (%)", range=[0, 100]),
-            # Invertimos el array con [::-1] para que en Plotly queden en el orden exacto de arriba hacia abajo
-            yaxis=dict(title="Categoría del Panel", categoryorder='array', categoryarray=categorias_ordenadas[::-1]),
-            font=dict(color='white'), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-            title="<b>Adherencia Promocional por Categoría de Panel</b>"
+            yaxis=dict(
+                title="Categoría del Panel",
+                categoryorder="array",
+                categoryarray=cats_sim[::-1],
+            ),
+            font=dict(color="white"),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            title="<b>Adherencia Promocional por Categoría de Panel</b>",
         )
-        st.plotly_chart(fig_mock_cat, use_container_width=True)
+        st.plotly_chart(fig_mock_cat, use_container_width=True, key="chart_42_promo_categoria_mock")
     # ------------------------------------------
     # 4.3. Barras Apiladas al 100% por Actitud del Médico
     # ------------------------------------------
