@@ -621,6 +621,8 @@ with col_t1:
             fig_pie_prod.update_traces(
                 textposition="outside",
                 textinfo="percent+label",
+                direction="clockwise",
+                rotation=90,
                 textfont=dict(color="white", size=11),
                 pull=[0.02] * len(df_pie_imp),
             )
