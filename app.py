@@ -1468,7 +1468,7 @@ if _df_52 is not None and len(_df_52) > 0:
             colores_op = {
                 "Mismo día (0 días)": "#00CC96",
                 "1 día después": "#F39C12",
-                "2 a 3 días después": "#3DD6FF",
+                "2 a 3 días después": "#7A2CFF",
                 "4+ días después": "#FF2D8F",
             }
 
