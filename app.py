@@ -583,19 +583,28 @@ with col_t1:
                     product_impacts[prod] = product_impacts.get(prod, 0.0) + row_sum
 
             df_pie_imp = pd.DataFrame(list(product_impacts.items()), columns=["Producto", "Impactos"])
+            df_pie_imp["Producto"] = df_pie_imp["Producto"].astype(str).str.strip()
+            df_pie_imp = df_pie_imp[df_pie_imp["Producto"] != ""].copy()
 
             paleta_donas_av = [
-                "#00CC96",
-                "#F39C12",
-                "#FF2D8F",
-                "#7A2CFF",
-                "#2962FF",
-                "#FF6B6B",
-                "#00B8D9",
+                "#00CC96",  # Esmeralda
+                "#FF2D8F",  # Fucsia
+                "#F39C12",  # Naranja
+                "#7A2CFF",  # Morado
+                "#00B8D9",  # Cian
+                "#FF6B6B",  # Coral
+                "#2962FF",  # Azul intenso
+                "#A3E635",  # Verde lima
+                "#E879F9",  # Lavanda / Orquídea
+                "#FACC15",  # Amarillo dorado
+                "#38BDF8",  # Celeste
+                "#FB7185",  # Rosa salmón
             ]
+
+            productos_unicos = list(dict.fromkeys(df_pie_imp["Producto"].tolist()))
             mapa_colores_prod = {
                 prod: paleta_donas_av[i % len(paleta_donas_av)]
-                for i, prod in enumerate(df_pie_imp["Producto"].tolist())
+                for i, prod in enumerate(productos_unicos)
             }
 
             fig_pie_prod = px.pie(
@@ -607,6 +616,7 @@ with col_t1:
                 title="<b>Impactos por Producto</b>",
                 color="Producto",
                 color_discrete_map=mapa_colores_prod,
+                category_orders={"Producto": productos_unicos},
             )
             fig_pie_prod.update_traces(
                 textposition="outside",
