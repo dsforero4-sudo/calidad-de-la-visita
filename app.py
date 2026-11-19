@@ -644,58 +644,79 @@ with col_t1:
     else:
         st.info("Carga el archivo de impactos en la barra lateral.")
 # --- COLUMNA 2: Torta de Ayudas Visuales ---
-
 with col_t2:
-
-    path_av = uploaded_av if uploaded_av is not None else ('Ayudas_visuales.xlsx' if os.path.exists('Ayudas_visuales.xlsx') else None)
-
+    path_av = uploaded_av if uploaded_av is not None else ("Ayudas_visuales.xlsx" if os.path.exists("Ayudas_visuales.xlsx") else None)
     if path_av is not None:
-
         try:
-
-            if hasattr(path_av, 'seek'):
-
+            if hasattr(path_av, "seek"):
                 path_av.seek(0)
-
             df_av_raw = pd.read_excel(path_av, skiprows=2, header=None)
-
             df_av_clean = df_av_raw[[4, 15]].copy()
+            df_av_clean.columns = ["Línea", "Ayudas_Visuales"]
+            df_av_clean["Línea"] = df_av_clean["Línea"].fillna("").astype(str).str.strip()
+            df_av_clean = df_av_clean[df_av_clean["Línea"] != ""].copy()
+            df_av_clean["Ayudas_Visuales"] = pd.to_numeric(df_av_clean["Ayudas_Visuales"], errors="coerce").fillna(0.0)
 
-            df_av_clean.columns = ['Línea', 'Ayudas_Visuales']
+            df_av_group = df_av_clean.groupby("Línea", as_index=False)["Ayudas_Visuales"].sum()
+            df_av_group = df_av_group[df_av_group["Ayudas_Visuales"] > 0].copy()
 
-            df_av_clean['Ayudas_Visuales'] = pd.to_numeric(df_av_clean['Ayudas_Visuales'], errors='coerce').fillna(0)
+            # Orden descendente de mayor a menor hacia la derecha
+            df_av_group = df_av_group.sort_values(by="Ayudas_Visuales", ascending=False).reset_index(drop=True)
 
-            
+            paleta_donas_av = [
+                "#00CC96",  # Esmeralda
+                "#FF2D8F",  # Fucsia
+                "#F39C12",  # Naranja
+                "#7A2CFF",  # Morado
+                "#00B8D9",  # Cian
+                "#FF6B6B",  # Coral
+                "#2962FF",  # Azul intenso
+                "#A3E635",  # Verde lima
+                "#E879F9",  # Lavanda / Orquídea
+                "#FACC15",  # Amarillo dorado
+                "#38BDF8",  # Celeste
+                "#FB7185",  # Rosa salmón
+            ]
 
-            df_av_group = df_av_clean.groupby('Línea', as_index=False)['Ayudas_Visuales'].sum()
-
-            df_av_group = df_av_group[df_av_group['Ayudas_Visuales'] > 0]
-
-            
+            lineas_ordenadas = df_av_group["Línea"].tolist()
+            mapa_colores_av = {
+                linea: paleta_donas_av[i % len(paleta_donas_av)]
+                for i, linea in enumerate(lineas_ordenadas)
+            }
 
             fig_pie_av = px.pie(
-
-                df_av_group, names='Línea', values='Ayudas_Visuales', 
-
-                hole=0.4, template='plotly_dark', 
-
-                title="<b>Ayudas Visuales por Línea</b>"
-
+                df_av_group,
+                names="Línea",
+                values="Ayudas_Visuales",
+                hole=0.4,
+                template="plotly_dark",
+                title="<b>Ayudas Visuales por Línea</b>",
+                color="Línea",
+                color_discrete_map=mapa_colores_av,
+                category_orders={"Línea": lineas_ordenadas},
             )
-
-            fig_pie_av.update_traces(textposition='inside', textinfo='percent+label')
-
-            fig_pie_av.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=420, font=dict(color='white'), showlegend=False)
-
-            st.plotly_chart(fig_pie_av, use_container_width=True)
-
+            fig_pie_av.update_traces(
+                sort=False,
+                textposition="outside",
+                textinfo="percent+label",
+                direction="clockwise",
+                rotation=90,
+                textfont=dict(color="white", size=11),
+                pull=[0.02] * len(df_av_group),
+            )
+            fig_pie_av.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                height=440,
+                font=dict(color="white"),
+                showlegend=False,
+                margin=dict(t=60, b=60, l=60, r=60),
+            )
+            st.plotly_chart(fig_pie_av, use_container_width=True, key="chart_dona_ayudas_visuales_linea")
         except Exception as e:
-
             st.error(f"Error en torta de ayudas visuales: {e}")
-
     else:
-
-        st.info("Carga el archivo de Ayudas Visuales en la barra lateral.") # ==========================================
+        st.info("Carga el archivo de Ayudas Visuales en la barra lateral.")
 # GRÁFICO DE BARRAS HORIZONTALES (ÚLTIMA POSICIÓN)
 # ==========================================
 st.markdown("### Top Impactos Promocionales: Realizados vs Esperados")
