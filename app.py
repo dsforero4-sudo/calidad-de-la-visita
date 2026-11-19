@@ -1047,40 +1047,99 @@ if df_visitas is not None:
     # 4.1. Torta: % Panel Visitado con Elemento Promocional
     # ------------------------------------------
     st.markdown("### 4.1. Cobertura de Elementos Promocionales en Visitas")
-    st.markdown("<span style='color: #B7BCC9;'>Proporción de contactos visitados que recibieron al menos un elemento o ayuda promocional.</span>", unsafe_allow_html=True)
+    st.markdown(
+        "<span style='color: #B7BCC9;'>Proporción de contactos visitados que recibieron al menos un elemento o ayuda promocional.</span>",
+        unsafe_allow_html=True,
+    )
 
-    col_promo = buscar_columna(df_visitas, ['Elemento Promocional', 'Promocional', 'Material', 'Ayuda Visual', 'Entregó Material', 'Material Entregado'])
-    
-    col_mock_torta, col_mock_info = st.columns([1.8, 1.2])
-    
+    col_promo = buscar_columna(
+        df_visitas,
+        ["Elemento Promocional", "Promocional", "Material", "Ayuda Visual", "Entregó Material", "Material Entregado"],
+    )
+
+    col_mock_torta, col_mock_info = st.columns([1.7, 1.3], vertical_alignment="center")
+
+    orden_promo = ["Con Elemento Promocional", "Sin Elemento Promocional"]
+    colores_promo = {
+        "Con Elemento Promocional": "#00CC96",
+        "Sin Elemento Promocional": "#FF2D8F",
+    }
+
     with col_mock_torta:
         if col_promo and col_promo in df_visitas.columns:
-            df_visitas['Tiene_Promo'] = df_visitas[col_promo].apply(lambda x: 'Con Elemento Promocional' if pd.notna(x) and str(x).strip() not in ['', '-', '0', 'nan', 'No'] else 'Sin Elemento Promocional')
-            df_promo_counts = df_visitas['Tiene_Promo'].value_counts().reset_index()
-            df_promo_counts.columns = ['Estado_Promo', 'Total']
-            
-            fig_promo_pie = px.pie(
-                df_promo_counts, names='Estado_Promo', values='Total', hole=0.4,
-                template='plotly_dark', title="<b>Visitas con Entrega de Material Promocional</b>"
+            df_visitas["Tiene_Promo"] = df_visitas[col_promo].apply(
+                lambda x: "Con Elemento Promocional"
+                if pd.notna(x) and str(x).strip().lower() not in ["", "-", "0", "nan", "none", "no"]
+                else "Sin Elemento Promocional"
             )
-            fig_promo_pie.update_traces(textposition='inside', textinfo='percent+label')
-            fig_promo_pie.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=400, font=dict(color='white'))
-            st.plotly_chart(fig_promo_pie, use_container_width=True)
+            df_promo_counts = (
+                df_visitas["Tiene_Promo"]
+                .value_counts()
+                .reindex(orden_promo, fill_value=0)
+                .reset_index()
+            )
+            df_promo_counts.columns = ["Estado_Promo", "Total"]
+
+            cant_con_promo = int(
+                df_promo_counts.loc[df_promo_counts["Estado_Promo"] == "Con Elemento Promocional", "Total"].iloc[0]
+            )
+            cant_sin_promo = int(
+                df_promo_counts.loc[df_promo_counts["Estado_Promo"] == "Sin Elemento Promocional", "Total"].iloc[0]
+            )
+            total_promo = cant_con_promo + cant_sin_promo
+            pct_con_promo = f"{(cant_con_promo / total_promo * 100):.1f}%" if total_promo > 0 else "0.0%"
+            pct_sin_promo = f"{(cant_sin_promo / total_promo * 100):.1f}%" if total_promo > 0 else "0.0%"
+
+            fig_promo_pie = px.pie(
+                df_promo_counts,
+                names="Estado_Promo",
+                values="Total",
+                hole=0.42,
+                template="plotly_dark",
+                title="<b>Visitas con Entrega de Material Promocional</b>",
+                color="Estado_Promo",
+                color_discrete_map=colores_promo,
+                category_orders={"Estado_Promo": orden_promo},
+            )
+            fig_promo_pie.update_traces(
+                sort=False,
+                domain=dict(x=[0.14, 0.86], y=[0.14, 0.86]),
+                textposition="outside",
+                textinfo="percent+label",
+                direction="clockwise",
+                rotation=90,
+                textfont=dict(color="white", size=11),
+                pull=[0.02] * len(df_promo_counts),
+            )
+            fig_promo_pie.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                height=430,
+                font=dict(color="white"),
+                showlegend=False,
+                margin=dict(t=55, b=35, l=20, r=20),
+            )
+            st.plotly_chart(fig_promo_pie, use_container_width=True, key="chart_41_promo_pie")
         else:
-            df_mock_promo = pd.DataFrame({'Estado': ['Con Elemento Promocional', 'Sin Elemento Promocional'], 'Total': [74.5, 25.5]})
-            fig_promo_pie = px.pie(
-                df_mock_promo, names='Estado', values='Total', hole=0.4,
-                template='plotly_dark', title="<b>Cobertura Promocional (Simulado Gerencial)</b>"
-            )
-            fig_promo_pie.update_traces(textposition='inside', textinfo='percent+label')
-            fig_promo_pie.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=400, font=dict(color='white'))
-            st.plotly_chart(fig_promo_pie, use_container_width=True)
+            cant_con_promo = 0
+            cant_sin_promo = 0
+            pct_con_promo = "0.0%"
+            pct_sin_promo = "0.0%"
+            st.info("💡 No se encontró una columna de material promocional en el archivo de visitas.")
 
     with col_mock_info:
-        st.markdown("<div style='background-color: #161B22; padding: 20px; border-radius: 10px; border: 1px solid #30363D;'>", unsafe_allow_html=True)
-        st.markdown("##### 💡 Insight Clave para el Cliente")
-        st.markdown("<span style='color: #B7BCC9; font-size: 14px;'>Este indicador permite medir el rigor táctico de los representantes al asociar material promocional en cada visita, clave para justificar la inversión en portafolio ante la dirección médica.</span>", unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.metric(
+            label="Visitas con Material Promocional",
+            value=f"{cant_con_promo:,}",
+            delta=pct_con_promo,
+        )
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.metric(
+            label="Visitas sin Material Promocional",
+            value=f"{cant_sin_promo:,}",
+            delta=pct_sin_promo,
+            delta_color="inverse",
+        )
 
     st.markdown("---")
 
