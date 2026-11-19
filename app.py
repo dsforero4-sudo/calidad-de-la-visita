@@ -1048,13 +1048,17 @@ if df_visitas is not None:
     # ------------------------------------------
     st.markdown("### 4.1. Cobertura de Elementos Promocionales en Visitas")
     st.markdown(
-        "<span style='color: #B7BCC9;'>Proporción de contactos visitados que recibieron al menos un elemento o ayuda promocional.</span>",
+        "<span style='color: #B7BCC9;'>Proporción de visitas únicas que recibieron al menos un elemento o ayuda promocional.</span>",
         unsafe_allow_html=True,
     )
 
     col_promo = buscar_columna(
         df_visitas,
         ["Elemento Promocional", "Promocional", "Material", "Ayuda Visual", "Entregó Material", "Material Entregado"],
+    )
+    col_id_visita_41 = buscar_columna(
+        df_visitas,
+        ["Cod. visita", "Código visita", "Cod visita", "Id visita", "ID Visita", "Visita única", "Visita"],
     )
 
     col_mock_torta, col_mock_info = st.columns([1.7, 1.3], vertical_alignment="center")
@@ -1067,13 +1071,41 @@ if df_visitas is not None:
 
     with col_mock_torta:
         if col_promo and col_promo in df_visitas.columns:
-            df_visitas["Tiene_Promo"] = df_visitas[col_promo].apply(
-                lambda x: "Con Elemento Promocional"
-                if pd.notna(x) and str(x).strip().lower() not in ["", "-", "0", "nan", "none", "no"]
-                else "Sin Elemento Promocional"
+            _df_base_41 = df_filtered if "df_filtered" in locals() and df_filtered is not None else df_visitas
+
+            def _es_promo_valido(val):
+                return pd.notna(val) and str(val).strip().lower() not in ["", "-", "0", "nan", "none", "no", "sin material"]
+
+            _df_41_work = _df_base_41.copy()
+            _df_41_work["_Tiene_Promo_Bool"] = _df_41_work[col_promo].apply(_es_promo_valido)
+
+            if "df_unique" in locals() and df_unique is not None and len(df_unique) > 0:
+                _df_41_uniq = df_unique.copy()
+                if col_id_visita_41 and col_id_visita_41 in _df_41_work.columns and col_id_visita_41 in _df_41_uniq.columns:
+                    ids_con_promo = set(
+                        _df_41_work.loc[_df_41_work["_Tiene_Promo_Bool"], col_id_visita_41].dropna()
+                    )
+                    _df_41_uniq["_Tiene_Promo_Bool"] = _df_41_uniq[col_id_visita_41].isin(ids_con_promo)
+                elif col_promo in _df_41_uniq.columns:
+                    _df_41_uniq["_Tiene_Promo_Bool"] = _df_41_uniq[col_promo].apply(_es_promo_valido)
+                else:
+                    _df_41_uniq["_Tiene_Promo_Bool"] = False
+            else:
+                if col_id_visita_41 and col_id_visita_41 in _df_41_work.columns:
+                    ids_con_promo = set(
+                        _df_41_work.loc[_df_41_work["_Tiene_Promo_Bool"], col_id_visita_41].dropna()
+                    )
+                    _df_41_uniq = _df_41_work.drop_duplicates(subset=[col_id_visita_41]).copy()
+                    _df_41_uniq["_Tiene_Promo_Bool"] = _df_41_uniq[col_id_visita_41].isin(ids_con_promo)
+                else:
+                    _df_41_uniq = _df_41_work.drop_duplicates().copy()
+
+            _df_41_uniq["Tiene_Promo"] = _df_41_uniq["_Tiene_Promo_Bool"].apply(
+                lambda ok: "Con Elemento Promocional" if ok else "Sin Elemento Promocional"
             )
+
             df_promo_counts = (
-                df_visitas["Tiene_Promo"]
+                _df_41_uniq["Tiene_Promo"]
                 .value_counts()
                 .reindex(orden_promo, fill_value=0)
                 .reset_index()
@@ -1096,7 +1128,7 @@ if df_visitas is not None:
                 values="Total",
                 hole=0.42,
                 template="plotly_dark",
-                title="<b>Visitas con Entrega de Material Promocional</b>",
+                title="<b>Visitas Únicas con Entrega de Material Promocional</b>",
                 color="Estado_Promo",
                 color_discrete_map=colores_promo,
                 category_orders={"Estado_Promo": orden_promo},
@@ -1129,20 +1161,19 @@ if df_visitas is not None:
 
     with col_mock_info:
         st.metric(
-            label="Visitas con Material Promocional",
+            label="Visitas Únicas con Material Promocional",
             value=f"{cant_con_promo:,}",
             delta=pct_con_promo,
         )
         st.markdown("<br>", unsafe_allow_html=True)
         st.metric(
-            label="Visitas sin Material Promocional",
+            label="Visitas Únicas sin Material Promocional",
             value=f"{cant_sin_promo:,}",
             delta=pct_sin_promo,
             delta_color="inverse",
         )
 
     st.markdown("---")
-
     # ------------------------------------------
     # ------------------------------------------
     # 4.2. Barras Apiladas al 100% por Categoría del Panel
