@@ -2014,3 +2014,47 @@ if _df_52 is not None and len(_df_52) > 0:
         st.info("💡 No se localizaron las columnas 'Fecha Visita' y 'Fecha digitado' en el archivo.")
 else:
     st.info("👈 Carga el **Listado de Visitas** en la barra lateral para visualizar este indicador.")
+
+import io
+import zipfile
+
+with st.expander("🧩 Exportar gráficas en formato HTML para plataforma web"):
+    st.caption("Genera archivos HTML interactivos de las gráficas disponibles sin alterar la app actual.")
+
+    # Diccionario con las figuras que existan en el contexto actual
+    candidatas_figuras = {
+        "01_distribucion_smart.html": "fig_smart_pie",
+        "03_actitud_medico.html": "fig_pie_actitud",
+        "03_nivel_adopcion.html": "fig_pie_adop",
+        "04_1_cobertura_promocional.html": "fig_promo_pie",
+        "04_2_promo_categoria.html": "fig_bar_cat",
+        "04_3_actitud_promo.html": "fig_bar_act",
+        "04_impactos_producto.html": "fig_pie_prod",
+        "04_ayudas_visuales_linea.html": "fig_pie_av",
+        "05_2_oportunidad_reporte_dona.html": "fig_52_pie",
+        "05_2_oportunidad_reporte_rep.html": "fig_52_bar",
+    }
+
+    figuras_listas = {
+        nombre_archivo: locals()[var_name]
+        for nombre_archivo, var_name in candidatas_figuras.items()
+        if var_name in locals() and locals()[var_name] is not None
+    }
+
+    if figuras_listas:
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+            for nombre_archivo, fig_obj in figuras_listas.items():
+                html_str = fig_obj.to_html(full_html=True, include_plotlyjs="cdn")
+                zf.writestr(nombre_archivo, html_str.encode("utf-8"))
+        zip_buffer.seek(0)
+
+        st.download_button(
+            label=f"⬇️ Descargar {len(figuras_listas)} gráficas en HTML (.zip)",
+            data=zip_buffer,
+            file_name="graficas_auditoria_html.zip",
+            mime="application/zip",
+            key="btn_export_graficas_html",
+        )
+    else:
+        st.info("Carga los archivos correspondientes para habilitar la exportación de las gráficas.")
