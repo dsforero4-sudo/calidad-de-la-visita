@@ -585,8 +585,6 @@ with col_t1:
             df_pie_imp = pd.DataFrame(list(product_impacts.items()), columns=["Producto", "Impactos"])
             df_pie_imp["Producto"] = df_pie_imp["Producto"].astype(str).str.strip()
             df_pie_imp = df_pie_imp[df_pie_imp["Producto"] != ""].copy()
-
-            # Orden descendente de mayor a menor impacto
             df_pie_imp = df_pie_imp.sort_values(by="Impactos", ascending=False).reset_index(drop=True)
 
             paleta_donas_av = [
@@ -614,7 +612,7 @@ with col_t1:
                 df_pie_imp,
                 names="Producto",
                 values="Impactos",
-                hole=0.4,
+                hole=0.42,
                 template="plotly_dark",
                 title="<b>Impactos por Producto</b>",
                 color="Producto",
@@ -623,6 +621,7 @@ with col_t1:
             )
             fig_pie_prod.update_traces(
                 sort=False,
+                domain=dict(x=[0.16, 0.84], y=[0.14, 0.86]),
                 textposition="outside",
                 textinfo="percent+label",
                 direction="clockwise",
@@ -633,16 +632,17 @@ with col_t1:
             fig_pie_prod.update_layout(
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(0,0,0,0)",
-                height=440,
+                height=450,
                 font=dict(color="white"),
                 showlegend=False,
-                margin=dict(t=60, b=60, l=60, r=60),
+                margin=dict(t=55, b=35, l=20, r=20),
             )
             st.plotly_chart(fig_pie_prod, use_container_width=True, key="chart_dona_impactos_prod")
         except Exception as e:
             st.error(f"Error en torta de impactos: {e}")
     else:
         st.info("Carga el archivo de impactos en la barra lateral.")
+
 # --- COLUMNA 2: Torta de Ayudas Visuales ---
 with col_t2:
     path_av = uploaded_av if uploaded_av is not None else ("Ayudas_visuales.xlsx" if os.path.exists("Ayudas_visuales.xlsx") else None)
@@ -659,8 +659,6 @@ with col_t2:
 
             df_av_group = df_av_clean.groupby("Línea", as_index=False)["Ayudas_Visuales"].sum()
             df_av_group = df_av_group[df_av_group["Ayudas_Visuales"] > 0].copy()
-
-            # Orden descendente de mayor a menor hacia la derecha
             df_av_group = df_av_group.sort_values(by="Ayudas_Visuales", ascending=False).reset_index(drop=True)
 
             paleta_donas_av = [
@@ -688,7 +686,7 @@ with col_t2:
                 df_av_group,
                 names="Línea",
                 values="Ayudas_Visuales",
-                hole=0.4,
+                hole=0.42,
                 template="plotly_dark",
                 title="<b>Ayudas Visuales por Línea</b>",
                 color="Línea",
@@ -697,6 +695,7 @@ with col_t2:
             )
             fig_pie_av.update_traces(
                 sort=False,
+                domain=dict(x=[0.16, 0.84], y=[0.14, 0.86]),
                 textposition="outside",
                 textinfo="percent+label",
                 direction="clockwise",
@@ -707,10 +706,10 @@ with col_t2:
             fig_pie_av.update_layout(
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(0,0,0,0)",
-                height=440,
+                height=450,
                 font=dict(color="white"),
                 showlegend=False,
-                margin=dict(t=60, b=60, l=60, r=60),
+                margin=dict(t=55, b=35, l=20, r=20),
             )
             st.plotly_chart(fig_pie_av, use_container_width=True, key="chart_dona_ayudas_visuales_linea")
         except Exception as e:
