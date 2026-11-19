@@ -986,182 +986,183 @@ if st.button("🖨️ Preparar Vista para Imprimir / Guardar PDF"):
 
 st.markdown("---")
 
-    # ------------------------------------------
-    # 4.4. Compromisos (Espacio reservado para próxima fase)
-    # ------------------------------------------
-    st.markdown("### 4.4. Compromisos")
-    st.markdown("<span style='color: #B7BCC9;'>Acuerdos, compromisos de prescripción o seguimiento médico y planes de acción acordados en la visita.</span>", unsafe_allow_html=True)
-    st.info("📌 **Apartado en preparación:** Aún no contamos con la fuente/columna de compromisos mapeada para este ciclo. Queda reservado este bloque para integrar el indicador en la siguiente iteración.")
+st.markdown("---")
 
-    st.markdown("---")
+# ------------------------------------------
+# 4.4. Compromisos (Espacio reservado para próxima fase)
+# ------------------------------------------
+st.markdown("### 4.4. Compromisos")
+st.markdown("<span style='color: #B7BCC9;'>Acuerdos, compromisos de prescripción o seguimiento médico y planes de acción acordados en la visita.</span>", unsafe_allow_html=True)
+st.info("📌 **Apartado en preparación:** Aún no contamos con la fuente/columna de compromisos mapeada para este ciclo. Queda reservado este bloque para integrar el indicador en la siguiente iteración.")
 
-    # ------------------------------------------
-    # 4.5. Auditoría de Calidad Metodológica (Técnica de Ventas Pharmadvisor - Visitas Únicas)
-    # ------------------------------------------
-    st.markdown("### 4.5. Auditoría de Calidad Metodológica (Técnica de Ventas Pharmadvisor - Visitas Únicas)")
-    st.markdown("<span style='color: #9AA5B1;'>Evaluación inteligente de la Fase 2 (Comentarios) y Fase 1/3 (Objetivos) con penalización automática a Alerta ante registros con copy-paste.</span>", unsafe_allow_html=True)
+st.markdown("---")
 
-    _df_base_45 = df_filtered if 'df_filtered' in locals() and df_filtered is not None else df_visitas
-    _df_uniq_45 = df_unique if 'df_unique' in locals() and df_unique is not None else _df_base_45
+# ------------------------------------------
+# 4.5. Auditoría de Calidad Metodológica (Técnica de Ventas Pharmadvisor - Visitas Únicas)
+# ------------------------------------------
+st.markdown("### 4.5. Auditoría de Calidad Metodológica (Técnica de Ventas Pharmadvisor - Visitas Únicas)")
+st.markdown("<span style='color: #9AA5B1;'>Evaluación inteligente de la Fase 2 (Comentarios) y Fase 1/3 (Objetivos) con penalización automática a Alerta ante registros con copy-paste.</span>", unsafe_allow_html=True)
 
-    if _df_base_45 is not None and _df_uniq_45 is not None:
-        col_comentario_v = next((c for c in _df_base_45.columns if 'comentario' in str(c).lower() and 'impacto' not in str(c).lower()), None)
-        if col_comentario_v is None and len(_df_base_45.columns) > 21:
-            col_comentario_v = _df_base_45.columns[21]
+_df_base_45 = df_filtered if 'df_filtered' in locals() and df_filtered is not None else df_visitas
+_df_uniq_45 = df_unique if 'df_unique' in locals() and df_unique is not None else _df_base_45
 
-        col_objetivo_w = next((c for c in _df_base_45.columns if 'objetivo' in str(c).lower()), None)
-        if col_objetivo_w is None and len(_df_base_45.columns) > 22:
-            col_objetivo_w = _df_base_45.columns[22]
+if _df_base_45 is not None and _df_uniq_45 is not None:
+    col_comentario_v = next((c for c in _df_base_45.columns if 'comentario' in str(c).lower() and 'impacto' not in str(c).lower()), None)
+    if col_comentario_v is None and len(_df_base_45.columns) > 21:
+        col_comentario_v = _df_base_45.columns[21]
 
-        col_rep_45 = buscar_columna(_df_base_45, ['Representante', 'Usuario', 'Asesor', 'Ejecutivo']) or 'Representante'
-        col_cod_v = buscar_columna(_df_base_45, ['Cod. visita', 'Código visita', 'Cod visita', 'Id visita'])
-        col_fecha_v = buscar_columna(_df_base_45, ['Fecha visita', 'Fecha', 'Fecha de visita'])
-        col_med_v = buscar_columna(_df_base_45, ['Médicos', 'Médico', 'Medico', 'Contacto'])
+    col_objetivo_w = next((c for c in _df_base_45.columns if 'objetivo' in str(c).lower()), None)
+    if col_objetivo_w is None and len(_df_base_45.columns) > 22:
+        col_objetivo_w = _df_base_45.columns[22]
 
-        if col_comentario_v in _df_uniq_45.columns and col_objetivo_w in _df_uniq_45.columns:
-            df_audit_tec = _df_uniq_45.copy()
+    col_rep_45 = buscar_columna(_df_base_45, ['Representante', 'Usuario', 'Asesor', 'Ejecutivo']) or 'Representante'
+    col_cod_v = buscar_columna(_df_base_45, ['Cod. visita', 'Código visita', 'Cod visita', 'Id visita'])
+    col_fecha_v = buscar_columna(_df_base_45, ['Fecha visita', 'Fecha', 'Fecha de visita'])
+    col_med_v = buscar_columna(_df_base_45, ['Médicos', 'Médico', 'Medico', 'Contacto'])
 
-            df_audit_tec['Com_Text'] = df_audit_tec[col_comentario_v].fillna('').astype(str).str.strip()
-            df_audit_tec['Obj_Text'] = df_audit_tec[col_objetivo_w].fillna('').astype(str).str.strip()
+    if col_comentario_v in _df_uniq_45.columns and col_objetivo_w in _df_uniq_45.columns:
+        df_audit_tec = _df_uniq_45.copy()
 
-            # Si no existe 'Es_Repetido', detectamos duplicados no triviales en comentario u objetivo
-            if 'Es_Repetido' not in df_audit_tec.columns:
-                com_norm = df_audit_tec['Com_Text'].str.lower().str.strip()
-                obj_norm = df_audit_tec['Obj_Text'].str.lower().str.strip()
-                dup_com = com_norm.duplicated(keep=False) & (com_norm.str.len() >= 8)
-                dup_obj = obj_norm.duplicated(keep=False) & (obj_norm.str.len() >= 8)
-                df_audit_tec['Es_Repetido'] = dup_com | dup_obj
+        df_audit_tec['Com_Text'] = df_audit_tec[col_comentario_v].fillna('').astype(str).str.strip()
+        df_audit_tec['Obj_Text'] = df_audit_tec[col_objetivo_w].fillna('').astype(str).str.strip()
 
-            palabras_prohibidas_com = ['', '-', 'nan', 'none', 'nat', '0', 'ok', 'bien', 'excelente', 'sin novedad', 'atendió bien']
+        if 'Es_Repetido' not in df_audit_tec.columns:
+            com_norm = df_audit_tec['Com_Text'].str.lower().str.strip()
+            obj_norm = df_audit_tec['Obj_Text'].str.lower().str.strip()
+            dup_com = com_norm.duplicated(keep=False) & (com_norm.str.len() >= 8)
+            dup_obj = obj_norm.duplicated(keep=False) & (obj_norm.str.len() >= 8)
+            df_audit_tec['Es_Repetido'] = dup_com | dup_obj
 
-            def calificar_y_justificar_comentario_flexible(txt, es_rep):
-                t_low = str(txt).lower().strip()
-                if t_low in palabras_prohibidas_com or len(str(txt).strip()) < 8:
-                    return '🔴 Alerta: Vacío o Genérico', 'El comentario está vacío o usa expresiones genéricas ("bien", "ok", "sin novedad").'
+        palabras_prohibidas_com = ['', '-', 'nan', 'none', 'nat', '0', 'ok', 'bien', 'excelente', 'sin novedad', 'atendió bien']
 
-                if bool(es_rep):
-                    return '🔴 Alerta: Penalizado por Copy-Paste (Clonación)', 'El texto contiene elementos teóricos correctos, pero al estar repetido idénticamente en múltiples visitas, se invalida por falta de exploración individual genuina.'
+        def calificar_y_justificar_comentario_flexible(txt, es_rep):
+            t_low = str(txt).lower().strip()
+            if t_low in palabras_prohibidas_com or len(str(txt).strip()) < 8:
+                return '🔴 Alerta: Vacío o Genérico', 'El comentario está vacío o usa expresiones genéricas ("bien", "ok", "sin novedad").'
 
-                palabras_alta_calidad = [
-                    'acepta', 'indiferente', 'objeción', 'objecion', 'escepticismo', 'evasivo', 'acuerdo',
-                    'compromiso', 'diferencia', 'valor', 'claro', 'dudas', 'explica', 'explicó', 'habla', 'habló',
-                    'revisa', 'revisó', 'conoce', 'conoció', 'prescribe', 'prescribirá'
-                ]
-                if any(w in t_low for w in palabras_alta_calidad):
-                    return '🟢 Alta Calidad (Técnica Aplicada)', 'El comentario evidencia de forma sólida la Fase 2 y es un registro único y personalizado.'
-                else:
-                    return '🟡 Regular (Superficial / Sin Actitud Clara)', 'El texto relata la visita pero carece de profundidad y argumentación diferencial.'
+            if bool(es_rep):
+                return '🔴 Alerta: Penalizado por Copy-Paste (Clonación)', 'El texto contiene elementos teóricos correctos, pero al estar repetido idénticamente en múltiples visitas, se invalida por falta de exploración individual genuina.'
 
-            palabras_actividades = ['entregar', 'visitar', 'saludar', 'llamar', 'dejar', 'muestra', 'material', 'obsequio']
+            palabras_alta_calidad = [
+                'acepta', 'indiferente', 'objeción', 'objecion', 'escepticismo', 'evasivo', 'acuerdo',
+                'compromiso', 'diferencia', 'valor', 'claro', 'dudas', 'explica', 'explicó', 'habla', 'habló',
+                'revisa', 'revisó', 'conoce', 'conoció', 'prescribe', 'prescribirá'
+            ]
+            if any(w in t_low for w in palabras_alta_calidad):
+                return '🟢 Alta Calidad (Técnica Aplicada)', 'El comentario evidencia de forma sólida la Fase 2 y es un registro único y personalizado.'
+            else:
+                return '🟡 Regular (Superficial / Sin Actitud Clara)', 'El texto relata la visita pero carece de profundidad y argumentación diferencial.'
 
-            def calificar_y_justificar_objetivo(txt):
-                t_low = str(txt).lower().strip()
-                if t_low in palabras_prohibidas_com or len(str(txt).strip()) < 8:
-                    return '🔴 Alerta: Sin Objetivo Definido', 'El campo de objetivo está vacío o no especifica el comportamiento esperado.'
-                elif any(t_low.startswith(act) for act in palabras_actividades):
-                    return '🔴 Alerta: Confunde Actividad con Objetivo', 'Describe una tarea logística en lugar de definir un comportamiento clínico SMART.'
-                elif any(w in t_low for w in ['iniciar', 'reiniciar', 'aumentar', 'sostener', 'mantener', 'reemplazar', 'posicionar', 'evaluar', 'prescripción', 'uso']):
-                    return '🟢 Alta Calidad (Comportamental SMART)', 'El objetivo está formulado correctamente como un cambio de comportamiento prescriptivo.'
-                else:
-                    return '🟡 Regular (Objetivo Poco Específico)', 'El objetivo menciona una intención pero carece de la precisión requerida.'
+        palabras_actividades = ['entregar', 'visitar', 'saludar', 'llamar', 'dejar', 'muestra', 'material', 'obsequio']
 
-            res_com = [calificar_y_justificar_comentario_flexible(row['Com_Text'], row['Es_Repetido']) for _, row in df_audit_tec.iterrows()]
-            df_audit_tec['Calidad_Comentario'] = [r[0] for r in res_com]
-            df_audit_tec['Justificacion_Comentario'] = [r[1] for r in res_com]
+        def calificar_y_justificar_objetivo(txt):
+            t_low = str(txt).lower().strip()
+            if t_low in palabras_prohibidas_com or len(str(txt).strip()) < 8:
+                return '🔴 Alerta: Sin Objetivo Definido', 'El campo de objetivo está vacío o no especifica el comportamiento esperado.'
+            elif any(t_low.startswith(act) for act in palabras_actividades):
+                return '🔴 Alerta: Confunde Actividad con Objetivo', 'Describe una tarea logística en lugar de definir un comportamiento clínico SMART.'
+            elif any(w in t_low for w in ['iniciar', 'reiniciar', 'aumentar', 'sostener', 'mantener', 'reemplazar', 'posicionar', 'evaluar', 'prescripción', 'uso']):
+                return '🟢 Alta Calidad (Comportamental SMART)', 'El objetivo está formulado correctamente como un cambio de comportamiento prescriptivo.'
+            else:
+                return '🟡 Regular (Objetivo Poco Específico)', 'El objetivo menciona una intención pero carece de la precisión requerida.'
 
-            res_obj = df_audit_tec['Obj_Text'].apply(calificar_y_justificar_objetivo)
-            df_audit_tec['Calidad_Objetivo'] = [r[0] for r in res_obj]
-            df_audit_tec['Justificacion_Objetivo'] = [r[1] for r in res_obj]
+        res_com = [calificar_y_justificar_comentario_flexible(row['Com_Text'], row['Es_Repetido']) for _, row in df_audit_tec.iterrows()]
+        df_audit_tec['Calidad_Comentario'] = [r[0] for r in res_com]
+        df_audit_tec['Justificacion_Comentario'] = [r[1] for r in res_com]
 
-            def calificacion_global(row):
-                c = row['Calidad_Comentario']
-                o = row['Calidad_Objetivo']
-                if 'Alerta' in c or 'Alerta' in o:
-                    return '🔴 Riesgo Metodológico (Alerta)'
-                elif 'Regular' in c or 'Regular' in o:
-                    return '🟡 En Proceso de Apropiación'
-                else:
-                    return '🟢 Visita Sobresaliente (Metodología Dominada)'
+        res_obj = df_audit_tec['Obj_Text'].apply(calificar_y_justificar_objetivo)
+        df_audit_tec['Calidad_Objetivo'] = [r[0] for r in res_obj]
+        df_audit_tec['Justificacion_Objetivo'] = [r[1] for r in res_obj]
 
-            df_audit_tec['Estado_Metodologico'] = df_audit_tec.apply(calificacion_global, axis=1)
+        def calificacion_global(row):
+            c = row['Calidad_Comentario']
+            o = row['Calidad_Objetivo']
+            if 'Alerta' in c or 'Alerta' in o:
+                return '🔴 Riesgo Metodológico (Alerta)'
+            elif 'Regular' in c or 'Regular' in o:
+                return '🟡 En Proceso de Apropiación'
+            else:
+                return '🟢 Visita Sobresaliente (Metodología Dominada)'
 
-            total_v_audit = len(df_audit_tec)
-            sobresalientes = len(df_audit_tec[df_audit_tec['Estado_Metodologico'] == '🟢 Visita Sobresaliente (Metodología Dominada)'])
-            alertas = len(df_audit_tec[df_audit_tec['Estado_Metodologico'] == '🔴 Riesgo Metodológico (Alerta)'])
+        df_audit_tec['Estado_Metodologico'] = df_audit_tec.apply(calificacion_global, axis=1)
 
-            m1, m2, m3 = st.columns(3)
-            m1.metric("Visitas Únicas Evaluadas (Técnica)", f"{total_v_audit:,}")
-            m2.metric("Visitas Metodológicamente Sobresalientes", f"{sobresalientes:,}", f"{(sobresalientes/total_v_audit*100):.1f}%" if total_v_audit > 0 else "0.0%")
-            m3.metric("Visitas en Alerta (Riesgo)", f"{alertas:,}", f"{(alertas/total_v_audit*100):.1f}%" if total_v_audit > 0 else "0.0%", delta_color="inverse")
+        total_v_audit = len(df_audit_tec)
+        sobresalientes = len(df_audit_tec[df_audit_tec['Estado_Metodologico'] == '🟢 Visita Sobresaliente (Metodología Dominada)'])
+        alertas = len(df_audit_tec[df_audit_tec['Estado_Metodologico'] == '🔴 Riesgo Metodológico (Alerta)'])
 
-            st.markdown("---")
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Visitas Únicas Evaluadas (Técnica)", f"{total_v_audit:,}")
+        m2.metric("Visitas Metodológicamente Sobresalientes", f"{sobresalientes:,}", f"{(sobresalientes/total_v_audit*100):.1f}%" if total_v_audit > 0 else "0.0%")
+        m3.metric("Visitas en Alerta (Riesgo)", f"{alertas:,}", f"{(alertas/total_v_audit*100):.1f}%" if total_v_audit > 0 else "0.0%", delta_color="inverse")
 
-            rep_col_uso = col_rep_45 if col_rep_45 in df_audit_tec.columns else None
-            if rep_col_uso:
-                df_audit_tec['_Rep_Audit'] = df_audit_tec[rep_col_uso].fillna('Sin Representante').astype(str).str.strip()
-                df_rep_metodo = df_audit_tec.groupby(['_Rep_Audit', 'Estado_Metodologico'], as_index=False).size().rename(columns={'size': 'Total'})
-                df_rep_totales = df_rep_metodo.groupby('_Rep_Audit', as_index=False)['Total'].sum().rename(columns={'Total': 'Total_Rep'})
-                df_rep_metodo = pd.merge(df_rep_metodo, df_rep_totales, on='_Rep_Audit')
-                df_rep_metodo['Porcentaje'] = (df_rep_metodo['Total'] / df_rep_metodo['Total_Rep'] * 100).round(1)
+        st.markdown("---")
 
-                def formato_etiqueta(row):
-                    if row['Porcentaje'] >= 5.0:
-                        return f"{row['Total']} ({row['Porcentaje']}%)"
-                    return ""
+        rep_col_uso = col_rep_45 if col_rep_45 in df_audit_tec.columns else None
+        if rep_col_uso:
+            df_audit_tec['_Rep_Audit'] = df_audit_tec[rep_col_uso].fillna('Sin Representante').astype(str).str.strip()
+            df_rep_metodo = df_audit_tec.groupby(['_Rep_Audit', 'Estado_Metodologico'], as_index=False).size().rename(columns={'size': 'Total'})
+            df_rep_totales = df_rep_metodo.groupby('_Rep_Audit', as_index=False)['Total'].sum().rename(columns={'Total': 'Total_Rep'})
+            df_rep_metodo = pd.merge(df_rep_metodo, df_rep_totales, on='_Rep_Audit')
+            df_rep_metodo['Porcentaje'] = (df_rep_metodo['Total'] / df_rep_metodo['Total_Rep'] * 100).round(1)
 
-                df_rep_metodo['Texto_Barra'] = df_rep_metodo.apply(formato_etiqueta, axis=1)
-                n_reps_45 = df_audit_tec['_Rep_Audit'].nunique()
+            def formato_etiqueta(row):
+                if row['Porcentaje'] >= 5.0:
+                    return f"{row['Total']} ({row['Porcentaje']}%)"
+                return ""
 
-                fig_metodo = px.bar(
-                    df_rep_metodo, x='Total', y='_Rep_Audit', color='Estado_Metodologico', barmode='stack',
-                    text='Texto_Barra',
-                    template='plotly_dark', title="<b>Adopción de la Técnica de Ventas por Representante (Penalización Estricta por Copia)</b>",
-                    color_discrete_map={
-                        '🟢 Visita Sobresaliente (Metodología Dominada)': '#2ECC71',
-                        '🟡 En Proceso de Apropiación': '#F39C12',
-                        '🔴 Riesgo Metodológico (Alerta)': '#E74C3C'
-                    },
-                    orientation='h'
-                )
-                fig_metodo.update_traces(textposition='inside', insidetextanchor='middle', textfont_size=11)
-                fig_metodo.update_layout(
-                    paper_bgcolor='#1C202C', plot_bgcolor='#2D3346', height=max(450, n_reps_45 * 25),
-                    xaxis_title="Cantidad de Visitas Únicas", yaxis_title="Representante",
-                    yaxis={'categoryorder': 'total ascending'},
-                    legend_title="Nivel Metodológico",
-                    margin=dict(t=50, b=50, l=150, r=40)
-                )
-                st.plotly_chart(fig_metodo, use_container_width=True)
+            df_rep_metodo['Texto_Barra'] = df_rep_metodo.apply(formato_etiqueta, axis=1)
+            n_reps_45 = df_audit_tec['_Rep_Audit'].nunique()
 
-            with st.expander("🔍 Ver detalle completo de auditoría (por Visita Única) con filtros de calidad y representante"):
-                st.markdown("<span style='color: #9AA5B1; font-size: 13px;'>Filtra el detalle de visitas únicas según el nivel metodológico o el representante de interés.</span>", unsafe_allow_html=True)
+            fig_metodo = px.bar(
+                df_rep_metodo, x='Total', y='_Rep_Audit', color='Estado_Metodologico', barmode='stack',
+                text='Texto_Barra',
+                template='plotly_dark', title="<b>Adopción de la Técnica de Ventas por Representante (Penalización Estricta por Copia)</b>",
+                color_discrete_map={
+                    '🟢 Visita Sobresaliente (Metodología Dominada)': '#2ECC71',
+                    '🟡 En Proceso de Apropiación': '#F39C12',
+                    '🔴 Riesgo Metodológico (Alerta)': '#E74C3C'
+                },
+                orientation='h'
+            )
+            fig_metodo.update_traces(textposition='inside', insidetextanchor='middle', textfont_size=11)
+            fig_metodo.update_layout(
+                paper_bgcolor='#1C202C', plot_bgcolor='#2D3346', height=max(450, n_reps_45 * 25),
+                xaxis_title="Cantidad de Visitas Únicas", yaxis_title="Representante",
+                yaxis={'categoryorder': 'total ascending'},
+                legend_title="Nivel Metodológico",
+                margin=dict(t=50, b=50, l=150, r=40)
+            )
+            st.plotly_chart(fig_metodo, use_container_width=True)
 
-                col_f_niv, col_f_rep = st.columns(2)
-                niveles_disponibles = ['Todos'] + sorted(df_audit_tec['Estado_Metodologico'].unique().tolist())
-                with col_f_niv:
-                    filtro_nivel_sel = st.selectbox("Filtrar por Nivel Metodológico", options=niveles_disponibles, key="select_filtro_nivel_45")
+        with st.expander("🔍 Ver detalle completo de auditoría (por Visita Única) con filtros de calidad y representante"):
+            st.markdown("<span style='color: #9AA5B1; font-size: 13px;'>Filtra el detalle de visitas únicas según el nivel metodológico o el representante de interés.</span>", unsafe_allow_html=True)
 
-                reps_disponibles_audit = ['Todos'] + sorted(df_audit_tec['_Rep_Audit'].unique().tolist()) if '_Rep_Audit' in df_audit_tec.columns else ['Todos']
-                with col_f_rep:
-                    filtro_rep_sel = st.selectbox("Filtrar por Representante", options=reps_disponibles_audit, key="select_filtro_rep_audit_45")
+            col_f_niv, col_f_rep = st.columns(2)
+            niveles_disponibles = ['Todos'] + sorted(df_audit_tec['Estado_Metodologico'].unique().tolist())
+            with col_f_niv:
+                filtro_nivel_sel = st.selectbox("Filtrar por Nivel Metodológico", options=niveles_disponibles, key="select_filtro_nivel_45")
 
-                df_tabla_filtrada = df_audit_tec.copy()
-                if filtro_nivel_sel != 'Todos':
-                    df_tabla_filtrada = df_tabla_filtrada[df_tabla_filtrada['Estado_Metodologico'] == filtro_nivel_sel]
-                if filtro_rep_sel != 'Todos' and '_Rep_Audit' in df_tabla_filtrada.columns:
-                    df_tabla_filtrada = df_tabla_filtrada[df_tabla_filtrada['_Rep_Audit'] == filtro_rep_sel]
+            reps_disponibles_audit = ['Todos'] + sorted(df_audit_tec['_Rep_Audit'].unique().tolist()) if '_Rep_Audit' in df_audit_tec.columns else ['Todos']
+            with col_f_rep:
+                filtro_rep_sel = st.selectbox("Filtrar por Representante", options=reps_disponibles_audit, key="select_filtro_rep_audit_45")
 
-                st.markdown(f"<span style='color: #00D26A; font-size: 13px;'>Mostrando {len(df_tabla_filtrada):,} registros filtrados.</span>", unsafe_allow_html=True)
+            df_tabla_filtrada = df_audit_tec.copy()
+            if filtro_nivel_sel != 'Todos':
+                df_tabla_filtrada = df_tabla_filtrada[df_tabla_filtrada['Estado_Metodologico'] == filtro_nivel_sel]
+            if filtro_rep_sel != 'Todos' and '_Rep_Audit' in df_tabla_filtrada.columns:
+                df_tabla_filtrada = df_tabla_filtrada[df_tabla_filtrada['_Rep_Audit'] == filtro_rep_sel]
 
-                cols_mostrar = [c for c in [
-                    '_Rep_Audit', col_cod_v, col_fecha_v, col_med_v,
-                    col_comentario_v, 'Calidad_Comentario', 'Justificacion_Comentario',
-                    col_objetivo_w, 'Calidad_Objetivo', 'Justificacion_Objetivo',
-                    'Estado_Metodologico'
-                ] if c and c in df_tabla_filtrada.columns]
+            st.markdown(f"<span style='color: #00D26A; font-size: 13px;'>Mostrando {len(df_tabla_filtrada):,} registros filtrados.</span>", unsafe_allow_html=True)
 
-                st.dataframe(df_tabla_filtrada[cols_mostrar], use_container_width=True, hide_index=True)
-        else:
-            st.warning("⚠️ No se pudieron localizar las columnas de Comentario y Objetivo en el archivo cargado.")
+            cols_mostrar = [c for c in [
+                '_Rep_Audit', col_cod_v, col_fecha_v, col_med_v,
+                col_comentario_v, 'Calidad_Comentario', 'Justificacion_Comentario',
+                col_objetivo_w, 'Calidad_Objetivo', 'Justificacion_Objetivo',
+                'Estado_Metodologico'
+            ] if c and c in df_tabla_filtrada.columns]
+
+            st.dataframe(df_tabla_filtrada[cols_mostrar], use_container_width=True, hide_index=True)
     else:
-        st.info("👈 Carga el **Listado de Visitas** en la barra lateral para ejecutar la auditoría metodológica.")
+        st.warning("⚠️ No se pudieron localizar las columnas de Comentario y Objetivo en el archivo cargado.")
+else:
+    st.info("👈 Carga el **Listado de Visitas** en la barra lateral para ejecutar la auditoría metodológica.")
