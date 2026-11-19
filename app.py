@@ -1303,60 +1303,137 @@ if df_visitas is not None:
             title="<b>Adherencia Promocional por Categoría de Panel</b>",
         )
         st.plotly_chart(fig_mock_cat, use_container_width=True, key="chart_42_promo_categoria_mock")
-    # ------------------------------------------
+# ------------------------------------------
     # 4.3. Barras Apiladas al 100% por Actitud del Médico
     # ------------------------------------------
     st.markdown("### 4.3. Correlación: Actitud Médica vs. Entrega Promocional")
-    st.markdown("<span style='color: #B7BCC9;'>Comparativa porcentual del uso de material promocional segmentada según la actitud registrada del médico.</span>", unsafe_allow_html=True)
+    st.markdown(
+        "<span style='color: #B7BCC9;'>Comparativa porcentual del uso de material promocional segmentada según la actitud registrada del médico.</span>",
+        unsafe_allow_html=True,
+    )
 
-    actitudes_oficiales = ["Aceptación", "Escepticismo", "Evasivo", "Indiferencia por no necesario", "Sin sondeo"]
+    colores_43 = {
+        "Entregado": "#00CC96",
+        "No Entregado": "#FF2D8F",
+    }
+
+    orden_importancia_actitudes = [
+        "Aceptación",
+        "Escepticismo",
+        "Evasivo",
+        "Indiferencia por no necesario",
+        "Indiferencia por satisfacción con el producto actual",
+        "Objeción por concepto falso",
+        "Sin sondeo",
+    ]
 
     if col_impacto and col_impacto in df_visitas.columns:
         df_act_data = df_visitas.copy()
-        df_act_data['Actitud_Clean'] = df_act_data[col_impacto].fillna('Sin sondeo').astype(str).str.strip()
-        df_act_data['Actitud_Clean'] = df_act_data['Actitud_Clean'].replace(['-', '', 'nan', 'none', 'NaN'], 'Sin sondeo')
-        df_act_data['Promo_Status'] = df_act_data[col_promo].apply(lambda x: 'Entregado' if pd.notna(x) and str(x).strip() not in ['', '-', '0', 'nan', 'No'] else 'No Entregado') if col_promo in df_act_data.columns else 'Entregado'
+        df_act_data["Actitud_Clean"] = df_act_data[col_impacto].fillna("Sin sondeo").astype(str).str.strip()
+        df_act_data["Actitud_Clean"] = df_act_data["Actitud_Clean"].replace(
+            ["-", "", "nan", "none", "NaN", "NAN"], "Sin sondeo"
+        )
 
-        df_act_pivot = pd.crosstab(df_act_data['Actitud_Clean'], df_act_data['Promo_Status'], normalize='index') * 100
-        df_act_pivot = df_act_pivot.reset_index()
+        if col_promo and col_promo in df_act_data.columns:
+            df_act_data["Promo_Status"] = df_act_data[col_promo].apply(
+                lambda x: "Entregado"
+                if pd.notna(x) and str(x).strip().lower() not in ["", "-", "0", "nan", "none", "no", "sin material"]
+                else "No Entregado"
+            )
+        else:
+            df_act_data["Promo_Status"] = "No Entregado"
+
+        df_act_pivot = (
+            pd.crosstab(df_act_data["Actitud_Clean"], df_act_data["Promo_Status"], normalize="index") * 100
+        )
+        for estado_p in ["Entregado", "No Entregado"]:
+            if estado_p not in df_act_pivot.columns:
+                df_act_pivot[estado_p] = 0.0
+        df_act_pivot = df_act_pivot[["Entregado", "No Entregado"]].reset_index()
+
+        actitudes_presentes = df_act_pivot["Actitud_Clean"].tolist()
+        orden_final_act = [a for a in orden_importancia_actitudes if a in actitudes_presentes] + [
+            a for a in actitudes_presentes if a not in orden_importancia_actitudes
+        ]
 
         fig_bar_act = go.Figure()
-        for col_name in df_act_pivot.columns:
-            if col_name != 'Actitud_Clean':
-                fig_bar_act.add_trace(go.Bar(
-                    y=df_act_pivot['Actitud_Clean'], x=df_act_pivot[col_name],
-                    name=col_name, orientation='h',
-                    text=df_act_pivot[col_name].round(1).astype(str) + '%',
-                    textposition='inside'
-                ))
+        for estado_p in ["Entregado", "No Entregado"]:
+            vals = df_act_pivot[estado_p].round(1)
+            txts = [f"{v:.1f}%" if v >= 4.0 else "" for v in vals]
+            fig_bar_act.add_trace(
+                go.Bar(
+                    y=df_act_pivot["Actitud_Clean"],
+                    x=vals,
+                    name=estado_p,
+                    orientation="h",
+                    marker=dict(color=colores_43[estado_p]),
+                    text=txts,
+                    textposition="inside",
+                    insidetextanchor="middle",
+                    textfont=dict(color="white", size=11),
+                )
+            )
+
         fig_bar_act.update_layout(
-            barmode='stack', template='plotly_dark',
-            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=400,
+            barmode="stack",
+            template="plotly_dark",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            height=420,
             xaxis=dict(title="Porcentaje (%)", range=[0, 100]),
-            yaxis=dict(title="Actitud del Médico"),
-            font=dict(color='white'), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            yaxis=dict(
+                title="Actitud del Médico",
+                categoryorder="array",
+                categoryarray=orden_final_act[::-1],
+            ),
+            font=dict(color="white"),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         )
-        st.plotly_chart(fig_bar_act, use_container_width=True)
+        st.plotly_chart(fig_bar_act, use_container_width=True, key="chart_43_actitud_promo")
     else:
-        mock_act_df = pd.DataFrame({
-            'Actitud': actitudes_oficiales,
-            'Entregado': [88.5, 72.0, 55.4, 40.1, 30.2]
-        })
-        mock_act_df['No Entregado'] = 100 - mock_act_df['Entregado']
+        mock_act_df = pd.DataFrame(
+            {
+                "Actitud": orden_importancia_actitudes,
+                "Entregado": [88.5, 72.0, 55.4, 45.0, 40.1, 35.0, 30.2],
+            }
+        )
+        mock_act_df["No Entregado"] = 100 - mock_act_df["Entregado"]
 
         fig_mock_act = go.Figure()
-        fig_mock_act.add_trace(go.Bar(y=mock_act_df['Actitud'], x=mock_act_df['Entregado'], name='Entregado', orientation='h', text=mock_act_df['Entregado'].round(1).astype(str)+'%', textposition='inside'))
-        fig_mock_act.add_trace(go.Bar(y=mock_act_df['Actitud'], x=mock_act_df['No Entregado'], name='No Entregado', orientation='h', text=mock_act_df['No Entregado'].round(1).astype(str)+'%', textposition='inside'))
+        for estado_p in ["Entregado", "No Entregado"]:
+            vals = mock_act_df[estado_p].round(1)
+            txts = [f"{v:.1f}%" if v >= 4.0 else "" for v in vals]
+            fig_mock_act.add_trace(
+                go.Bar(
+                    y=mock_act_df["Actitud"],
+                    x=vals,
+                    name=estado_p,
+                    orientation="h",
+                    marker=dict(color=colores_43[estado_p]),
+                    text=txts,
+                    textposition="inside",
+                    insidetextanchor="middle",
+                    textfont=dict(color="white", size=11),
+                )
+            )
 
         fig_mock_act.update_layout(
-            barmode='stack', template='plotly_dark',
-            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=400,
+            barmode="stack",
+            template="plotly_dark",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            height=420,
             xaxis=dict(title="Porcentaje (%)", range=[0, 100]),
-            yaxis=dict(title="Actitud del Médico", categoryorder='array', categoryarray=actitudes_oficiales),
-            font=dict(color='white'), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-            title="<b>Actitud vs. Entrega de Elementos Promocionales (Simulado Gerencial)</b>"
+            yaxis=dict(
+                title="Actitud del Médico",
+                categoryorder="array",
+                categoryarray=orden_importancia_actitudes[::-1],
+            ),
+            font=dict(color="white"),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            title="<b>Actitud vs. Entrega de Elementos Promocionales (Simulado Gerencial)</b>",
         )
-        st.plotly_chart(fig_mock_act, use_container_width=True)
+        st.plotly_chart(fig_mock_act, use_container_width=True, key="chart_43_actitud_promo_mock")
 
 else:
     st.info("👈 Por favor carga el **Listado de Visitas** en la barra lateral para habilitar los indicadores de la Sección 4.")
@@ -1364,14 +1441,6 @@ else:
 if st.button("🖨️ Preparar Vista para Imprimir / Guardar PDF"):
     st.balloons()
     st.info("Presiona las teclas **Ctrl + P** (o **Cmd + P** en Mac) en tu teclado y selecciona la opción **'Guardar como PDF'** en el destino de impresión.")
-
-st.markdown("---")
-
-st.markdown("---")
-
-st.markdown("---")
-
-st.markdown("---")
 
 st.markdown("---")
 
