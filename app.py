@@ -2034,3 +2034,40 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+import streamlit.components.v1 as components
+
+st.markdown(
+    """
+    <style>
+    @media print {
+        [data-testid="stSidebar"],
+        [data-testid="stToolbar"],
+        [data-testid="stHeader"],
+        .stButton,
+        .stDownloadButton,
+        iframe {
+            display: none !important;
+        }
+        .block-container {
+            max-width: 100% !important;
+            padding-top: 1rem !important;
+        }
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+if st.button("🖨️ Guardar reporte como PDF", key="btn_imprimir_pdf_reporte"):
+    components.html(
+        """
+        <script>
+            setTimeout(function() {
+                window.parent.print();
+            }, 150);
+        </script>
+        """,
+        height=0,
+        width=0,
+    )
