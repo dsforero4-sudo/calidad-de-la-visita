@@ -1159,4 +1159,13 @@ if _df_base_45 is not None and _df_uniq_45 is not None:
 
             reps_disponibles_audit = ['Todos'] + sorted(df_audit_tec['_Rep_Audit'].unique().tolist()) if '_Rep_Audit' in df_audit_tec.columns else ['Todos']
             with col_f_rep:
-                filtro_rep_sel = st.selectbox("Filtrar por Representante", options
+                filtro_rep_sel = st.selectbox("Filtrar por Representante", options=reps_disponibles_audit, key="select_filtro_rep_audit_45")
+
+            df_tabla_filtrada = df_audit_tec.copy()
+            if filtro_nivel_sel != 'Todos':
+                df_tabla_filtrada = df_tabla_filtrada[df_tabla_filtrada['Estado_Metodologico'] == filtro_nivel_sel]
+            if filtro_rep_sel != 'Todos' and '_Rep_Audit' in df_tabla_filtrada.columns:
+                df_tabla_filtrada = df_tabla_filtrada[df_tabla_filtrada['_Rep_Audit'] == filtro_rep_sel]
+
+            col_nombres_med = buscar_columna(_df_base_45, ['Nombres', 'Nombre'])
+            if col_nombres_med is None and len(_df_base
