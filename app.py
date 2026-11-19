@@ -551,44 +551,82 @@ col_t1, col_t2 = st.columns(2)
 
 # --- COLUMNA 1: Torta de Impactos Promocionales ---
 with col_t1:
-    if uploaded_impactos is not None or os.path.exists('Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx'):
+    if uploaded_impactos is not None or os.path.exists("Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx"):
         try:
-            path_imp = uploaded_impactos if uploaded_impactos is not None else 'Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx'
+            path_imp = (
+                uploaded_impactos
+                if uploaded_impactos is not None
+                else "Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx"
+            )
             df_imp_raw = pd.read_excel(path_imp, header=None)
-            
+
             real_cols = [3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36, 39]
             product_impacts = {}
-            
+
             for r in range(11, len(df_imp_raw)):
                 prod = df_imp_raw.iloc[r, 1]
-                if pd.isna(prod): continue
+                if pd.isna(prod):
+                    continue
                 prod = str(prod).strip()
-                if prod == '' or prod == '-': continue
-                    
-                row_sum = 0
+                if prod == "" or prod == "-":
+                    continue
+
+                row_sum = 0.0
                 for c in real_cols:
                     val = df_imp_raw.iloc[r, c]
-                    if pd.notna(val) and val != '-':
-                        try: row_sum += float(val)
-                        except: pass
+                    if pd.notna(val) and val != "-":
+                        try:
+                            row_sum += float(val)
+                        except Exception:
+                            pass
                 if row_sum > 0:
-                    product_impacts[prod] = product_impacts.get(prod, 0) + row_sum
-                    
-            df_pie_imp = pd.DataFrame(list(product_impacts.items()), columns=['Producto', 'Impactos'])
-            
+                    product_impacts[prod] = product_impacts.get(prod, 0.0) + row_sum
+
+            df_pie_imp = pd.DataFrame(list(product_impacts.items()), columns=["Producto", "Impactos"])
+
+            paleta_donas_av = [
+                "#00CC96",
+                "#F39C12",
+                "#FF2D8F",
+                "#7A2CFF",
+                "#2962FF",
+                "#FF6B6B",
+                "#00B8D9",
+            ]
+            mapa_colores_prod = {
+                prod: paleta_donas_av[i % len(paleta_donas_av)]
+                for i, prod in enumerate(df_pie_imp["Producto"].tolist())
+            }
+
             fig_pie_prod = px.pie(
-                df_pie_imp, names='Producto', values='Impactos', 
-                hole=0.4, template='plotly_dark', 
-                title="<b>Impactos por Producto</b>"
+                df_pie_imp,
+                names="Producto",
+                values="Impactos",
+                hole=0.4,
+                template="plotly_dark",
+                title="<b>Impactos por Producto</b>",
+                color="Producto",
+                color_discrete_map=mapa_colores_prod,
             )
-            fig_pie_prod.update_traces(textposition='inside', textinfo='percent+label')
-            fig_pie_prod.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=420, font=dict(color='white'), showlegend=False)
-            st.plotly_chart(fig_pie_prod, use_container_width=True)
+            fig_pie_prod.update_traces(
+                textposition="outside",
+                textinfo="percent+label",
+                textfont=dict(color="white", size=11),
+                pull=[0.02] * len(df_pie_imp),
+            )
+            fig_pie_prod.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                height=440,
+                font=dict(color="white"),
+                showlegend=False,
+                margin=dict(t=60, b=60, l=60, r=60),
+            )
+            st.plotly_chart(fig_pie_prod, use_container_width=True, key="chart_dona_impactos_prod")
         except Exception as e:
             st.error(f"Error en torta de impactos: {e}")
     else:
         st.info("Carga el archivo de impactos en la barra lateral.")
-
 # --- COLUMNA 2: Torta de Ayudas Visuales ---
 
 with col_t2:
