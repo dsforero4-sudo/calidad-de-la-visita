@@ -364,6 +364,85 @@ fig_smart_pie = px.pie(
 fig_smart_pie.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=450, font=dict(color='white'))
 st.plotly_chart(fig_smart_pie, use_container_width=True)
 
+with st.expander("Ver detalle completo de auditoría de objetivos SMART (por Visita Única) con filtros de nivel y representante"):
+    st.caption("Filtra el detalle de visitas únicas según el nivel SMART o el representante de interés.")
+
+    _df_det_smart = df_obj_eval.copy()
+    _rep_col_s1 = col_rep if col_rep and col_rep in _df_det_smart.columns else None
+    if _rep_col_s1:
+        _df_det_smart["_Rep_Smart"] = _df_det_smart[_rep_col_s1].fillna("Sin Representante").astype(str).str.strip()
+
+    col_fs_niv, col_fs_rep = st.columns(2)
+    niveles_smart_disp = ["Todos"] + sorted(_df_det_smart["Smart_Nivel"].dropna().unique().tolist())
+    with col_fs_niv:
+        filtro_smart_niv = st.selectbox(
+            "Filtrar por Nivel SMART",
+            options=niveles_smart_disp,
+            key="select_filtro_nivel_1",
+        )
+
+    reps_smart_disp = (
+        ["Todos"] + sorted(_df_det_smart["_Rep_Smart"].dropna().unique().tolist())
+        if "_Rep_Smart" in _df_det_smart.columns
+        else ["Todos"]
+    )
+    with col_fs_rep:
+        filtro_smart_rep = st.selectbox(
+            "Filtrar por Representante",
+            options=reps_smart_disp,
+            key="select_filtro_rep_1",
+        )
+
+    df_smart_filtrada = _df_det_smart.copy()
+    if filtro_smart_niv != "Todos":
+        df_smart_filtrada = df_smart_filtrada[df_smart_filtrada["Smart_Nivel"] == filtro_smart_niv]
+    if filtro_smart_rep != "Todos" and "_Rep_Smart" in df_smart_filtrada.columns:
+        df_smart_filtrada = df_smart_filtrada[df_smart_filtrada["_Rep_Smart"] == filtro_smart_rep]
+
+    col_cod_s1 = buscar_columna(df_smart_filtrada, ["Cod. visita", "Código visita", "Cod visita", "Id visita"])
+    col_fec_s1 = buscar_columna(df_smart_filtrada, ["Fecha visita", "Fecha", "Fecha de visita"])
+    col_med_s1 = buscar_columna(df_smart_filtrada, ["Médicos", "Médico", "Medico", "Cliente", "Contacto"])
+
+    col_nom_s1 = buscar_columna(df_smart_filtrada, ["Nombres", "Nombre"])
+    if col_nom_s1 is None and len(df_smart_filtrada.columns) > 14:
+        col_nom_s1 = df_smart_filtrada.columns[14]
+
+    col_ape_s1 = buscar_columna(df_smart_filtrada, ["Apellidos", "Apellido"])
+    if col_ape_s1 is None and len(df_smart_filtrada.columns) > 15:
+        col_ape_s1 = df_smart_filtrada.columns[15]
+
+    col_nom_comp_s1 = None
+    has_nom_s1 = bool(col_nom_s1 and col_nom_s1 in df_smart_filtrada.columns)
+    has_ape_s1 = bool(col_ape_s1 and col_ape_s1 in df_smart_filtrada.columns)
+    if has_nom_s1 or has_ape_s1:
+        _n1 = df_smart_filtrada[col_nom_s1].fillna("").astype(str).str.strip() if has_nom_s1 else ""
+        _a1 = df_smart_filtrada[col_ape_s1].fillna("").astype(str).str.strip() if has_ape_s1 else ""
+        df_smart_filtrada["Nombre Médico"] = (_n1 + " " + _a1).str.strip()
+        col_nom_comp_s1 = "Nombre Médico"
+
+    st.caption(f"Mostrando {len(df_smart_filtrada):,} registros filtrados.")
+
+    if len(df_smart_filtrada) > 0:
+        cols_base_s1 = [
+            "_Rep_Smart",
+            col_cod_s1,
+            col_fec_s1,
+            col_med_s1,
+            col_nom_comp_s1,
+            "Obj_Text",
+            "Smart_Puntaje",
+            "Smart_Nivel",
+            "Smart_Detalle",
+        ]
+        cols_mostrar_s1 = []
+        for c in cols_base_s1:
+            if c and c in df_smart_filtrada.columns and c not in cols_mostrar_s1:
+                cols_mostrar_s1.append(c)
+
+        st.dataframe(df_smart_filtrada[cols_mostrar_s1], use_container_width=True, hide_index=True)
+    else:
+        st.info("No hay visitas únicas que coincidan con esa combinación de filtros.")
+
 # ==========================================
 # SECCIÓN 1.1: MANEJO DE LA ACTITUD Y CIERRE (COPY-PASTE EN OBJETIVOS)
 # ==========================================
