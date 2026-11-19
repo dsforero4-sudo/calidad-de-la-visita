@@ -448,7 +448,7 @@ with st.expander("Ver detalle completo de auditoría de objetivos SMART (por Vis
 # ==========================================
 st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
 st.subheader("1.1. Objetivos, índice de Copy-Paste")
-st.markdown("<span style='color: #B7BCC9;'>Control de autorrepetición de objetivos (Copy-Paste).</span>", unsafe_allow_html=True)
+st.markdown("<span style='color: #B7BCC9;'>Control de repetición de objetivos (Copy-Paste).</span>", unsafe_allow_html=True)
 st.markdown("---")
 
 df_unique['Obj_Clean'] = df_unique[col_obj].fillna('').astype(str).str.strip().str.lower()
