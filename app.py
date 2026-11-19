@@ -818,44 +818,80 @@ if col_impacto and col_impacto in df_visitas.columns:
     
     # --- CONTRASTE DE DOS TORTAS LADO A LADO ---
     col_t1, col_t2 = st.columns(2)
-    
     # Torta 1: Actitud del Médico
     with col_t1:
         df_actitud_eval = df_visitas.drop_duplicates(subset=[col_visita]).copy() if col_visita in df_visitas.columns else df_visitas.copy()
         df_actitud_eval['Comentario_Clean'] = df_actitud_eval[col_impacto].fillna('Sin sondeo').astype(str).str.strip()
         df_actitud_eval['Comentario_Clean'] = df_actitud_eval['Comentario_Clean'].replace(['-', '', 'nan', 'none', 'NaN', 'NAN'], 'Sin sondeo')
-        
+
         df_act_counts = df_actitud_eval['Comentario_Clean'].value_counts().reset_index()
         df_act_counts.columns = ['Comentario_Impacto', 'Total']
-        
+
         if len(df_act_counts) > 7:
             top_n = 6
             df_top = df_act_counts.head(top_n)
             otros_sum = df_act_counts.iloc[top_n:]['Total'].sum()
             df_act_counts = pd.concat([df_top, pd.DataFrame([{'Comentario_Impacto': 'Otros / Varios', 'Total': otros_sum}])], ignore_index=True)
 
+        paleta_actitud = [
+            "#00CC96",  # Esmeralda
+            "#FF2D8F",  # Fucsia
+            "#F39C12",  # Naranja
+            "#7A2CFF",  # Morado
+            "#00B8D9",  # Cian
+            "#FF6B6B",  # Coral
+            "#2962FF",  # Azul intenso
+        ]
+        actitudes_unicas = list(dict.fromkeys(df_act_counts['Comentario_Impacto'].astype(str).str.strip().tolist()))
+        mapa_colores_actitud = {
+            act: paleta_actitud[i % len(paleta_actitud)]
+            for i, act in enumerate(actitudes_unicas)
+        }
+
         fig_pie_actitud = px.pie(
-            df_act_counts, names='Comentario_Impacto', values='Total', 
-            hole=0.4, template='plotly_dark', 
-            title="<b>Actitud del Médico (General)</b>"
+            df_act_counts,
+            names='Comentario_Impacto',
+            values='Total',
+            hole=0.42,
+            template='plotly_dark',
+            title="<b>Actitud del Médico (General)</b>",
+            color='Comentario_Impacto',
+            color_discrete_map=mapa_colores_actitud,
+            category_orders={"Comentario_Impacto": actitudes_unicas},
         )
-        fig_pie_actitud.update_traces(textposition='inside', textinfo='percent+label')
-        fig_pie_actitud.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=420, font=dict(color='white'), showlegend=False)
-        st.plotly_chart(fig_pie_actitud, use_container_width=True)
+        fig_pie_actitud.update_traces(
+            sort=False,
+            domain=dict(x=[0.16, 0.84], y=[0.14, 0.86]),
+            textposition='inside',
+            textinfo='percent+label',
+            direction='clockwise',
+            rotation=90,
+            textfont=dict(color='white', size=11),
+            pull=[0.02] * len(df_act_counts),
+        )
+        fig_pie_actitud.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            height=440,
+            font=dict(color='white'),
+            showlegend=False,
+            margin=dict(t=55, b=35, l=20, r=20),
+        )
+        st.plotly_chart(fig_pie_actitud, use_container_width=True, key="chart_dona_actitud_medico")
 
     # Torta 2: Nivel de Adopción (Panel Actual - Reclasificado y Ordenado)
     with col_t2:
         path_panel = uploaded_panel if uploaded_panel is not None else ('Consulta_Detallada_de_Contactos_V2_para_Médicos_2026-11-10_11_41_45.xlsx' if os.path.exists('Consulta_Detallada_de_Contactos_V2_para_Médicos_2026-11-10_11_41_45.xlsx') else None)
-        
+
         df_panel_loaded = None
         if path_panel is not None:
             try:
                 if hasattr(path_panel, 'seek'):
                     path_panel.seek(0)
                 df_panel_loaded = pd.read_excel(path_panel, header=10)
-            except Exception as e:
+            except Exception:
                 pass
-                
+
         if df_panel_loaded is not None:
             col_adop = None
             for c in df_panel_loaded.columns:
@@ -868,7 +904,7 @@ if col_impacto and col_impacto in df_visitas.columns:
 
             if col_adop is not None:
                 df_panel_clean = df_panel_loaded.iloc[1:].copy()
-                
+
                 # Función de limpieza y unificación de categorías solicitadas
                 def limpiar_adopcion(val):
                     v = str(val).strip().lower()
@@ -876,32 +912,61 @@ if col_impacto and col_impacto in df_visitas.columns:
                         return 'Alto'
                     elif v in ['medio']:
                         return 'Medio'
-                    else: # 'sin nivel', 'bajo', nan, etc. pasan a ser 'Bajo'
+                    else:  # 'sin nivel', 'bajo', nan, etc. pasan a ser 'Bajo'
                         return 'Bajo'
 
                 df_panel_clean['Adopcion_Clean'] = df_panel_clean[col_adop].apply(limpiar_adopcion)
-                
+
                 df_adop_counts = df_panel_clean['Adopcion_Clean'].value_counts().reset_index()
                 df_adop_counts.columns = ['Nivel_Adopcion', 'Total']
 
                 # Definimos el orden estricto en el sentido de las manecillas del reloj: Alto, Medio, Bajo
                 orden_categorias = ['Alto', 'Medio', 'Bajo']
                 df_adop_counts['Nivel_Adopcion'] = pd.Categorical(df_adop_counts['Nivel_Adopcion'], categories=orden_categorias, ordered=True)
-                df_adop_counts = df_adop_counts.sort_values('Nivel_Adopcion')
+                df_adop_counts = df_adop_counts.sort_values('Nivel_Adopcion').reset_index(drop=True)
+
+                mapa_colores_adop = {
+                    'Alto': '#00CC96',
+                    'Medio': '#F39C12',
+                    'Bajo': '#FF2D8F',
+                }
 
                 fig_pie_adop = px.pie(
-                    df_adop_counts, names='Nivel_Adopcion', values='Total', 
-                    hole=0.4, template='plotly_dark', 
+                    df_adop_counts,
+                    names='Nivel_Adopcion',
+                    values='Total',
+                    hole=0.42,
+                    template='plotly_dark',
                     title="<b>Nivel de Adopción (Panel Actual)</b>",
-                    category_orders={"Nivel_Adopcion": orden_categorias}
+                    color='Nivel_Adopcion',
+                    color_discrete_map=mapa_colores_adop,
+                    category_orders={"Nivel_Adopcion": orden_categorias},
                 )
-                fig_pie_adop.update_traces(textposition='inside', textinfo='percent+label', direction='clockwise', rotation=90)
-                fig_pie_adop.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=420, font=dict(color='white'), showlegend=False)
-                st.plotly_chart(fig_pie_adop, use_container_width=True)
+                fig_pie_adop.update_traces(
+                    sort=False,
+                    domain=dict(x=[0.16, 0.84], y=[0.14, 0.86]),
+                    textposition='inside',
+                    textinfo='percent+label',
+                    direction='clockwise',
+                    rotation=90,
+                    textfont=dict(color='white', size=11),
+                    pull=[0.02] * len(df_adop_counts),
+                )
+                fig_pie_adop.update_layout(
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    height=440,
+                    font=dict(color='white'),
+                    showlegend=False,
+                    margin=dict(t=55, b=35, l=20, r=20),
+                )
+                st.plotly_chart(fig_pie_adop, use_container_width=True, key="chart_dona_nivel_adopcion")
             else:
                 st.info("💡 No se encontró la columna de Nivel de Adopción en el archivo cargado.")
         else:
-            st.info("💡 Por favor cargue el archivo de Consulta Detallada de Contactos en la barra lateral.")    # --- GRÁFICA DE BARRAS HORIZONTALES APILADAS AL 100% (ORDENADAS POR ESPERADOS) ---
+            st.info("💡 Por favor cargue el archivo de Consulta Detallada de Contactos en la barra lateral.")    
+
+    # --- GRÁFICA DE BARRAS HORIZONTALES APILADAS AL 100% (ORDENADAS POR ESPERADOS) ---
     st.markdown("### 📊 Distribución Porcentual de Actitud por Producto")
     st.markdown("<span style='color: #B7BCC9;'>Comparativa 100% apilada ordenada por volumen de Impactos Esperados.</span>", unsafe_allow_html=True)
 
