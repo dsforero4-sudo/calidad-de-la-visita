@@ -1267,6 +1267,10 @@ if _df_base_45 is not None and _df_uniq_45 is not None:
                 col_apellidos_med = _df_base_45.columns[15]
 
             col_nombre_completo_med = None
-            if (
-                col_nombres_med in df_tabla_filtrada.columns
-                or col_apellidos_med in df
+            has_nom = col_nombres_med in df_tabla_filtrada.columns
+            has_ape = col_apellidos_med in df_tabla_filtrada.columns
+            if has_nom or has_ape:
+                _n = df_tabla_filtrada[col_nombres_med].fillna("").astype(str).str.strip() if has_nom else ""
+                _a = df_tabla_filtrada[col_apellidos_med].fillna("").astype(str).str.strip() if has_ape else ""
+                df_tabla_filtrada["Nombre Médico"] = (_n + " " + _a).str.strip()
+                col_nombre_completo_med = "Nombre Médico"
