@@ -2015,59 +2015,132 @@ if _df_52 is not None and len(_df_52) > 0:
 else:
     st.info("👈 Carga el **Listado de Visitas** en la barra lateral para visualizar este indicador.")
 
-st.markdown(
-    """
+import io
+from datetime import datetime
+
+st.markdown("### Exportar reporte estático para cliente")
+
+_figuras_reporte = [
+    (_nombre, locals()[_var])
+    for _nombre, _var in [
+        ("Distribución SMART", "fig_smart_pie"),
+        ("Actitud del Médico (General)", "fig_pie_actitud"),
+        ("Nivel de Adopción (Panel Actual)", "fig_pie_adop"),
+        ("Cobertura Promocional en Visitas", "fig_promo_pie"),
+        ("Entrega Promocional por Categoría del Panel", "fig_bar_cat"),
+        ("Actitud Médica vs. Entrega Promocional", "fig_bar_act"),
+        ("Impactos por Producto", "fig_pie_prod"),
+        ("Ayudas Visuales por Línea", "fig_pie_av"),
+        ("Oportunidad de Reporte (General)", "fig_52_pie"),
+        ("Oportunidad de Reporte por Representante", "fig_52_bar"),
+    ]
+    if _var in locals() and locals()[_var] is not None and hasattr(locals()[_var], "to_html")
+]
+
+# Respaldo: si alguna figura tiene otro nombre que empiece por 'fig', la captura igual
+_nombres_ya_incluidos = {id(_f) for _, _f in _figuras_reporte}
+for _var_name, _var_val in list(locals().items()):
+    if (
+        _var_name.startswith("fig")
+        and hasattr(_var_val, "to_html")
+        and id(_var_val) not in _nombres_ya_incluidos
+    ):
+        _titulo_limpio = _var_name.replace("fig_", "").replace("_", " ").strip().title()
+        _figuras_reporte.append((_titulo_limpio, _var_val))
+
+if _figuras_reporte:
+    _fecha_gen = datetime.now().strftime("%Y-%m-%d %H:%M")
+    _bloques_html = []
+
+    for _idx, (_titulo_fig, _fig_obj) in enumerate(_figuras_reporte):
+        # En la primera gráfica incluimos plotly.js completo; en las demás lo omitimos para que el archivo no pese de más
+        _incluir_js = "inline" if _idx == 0 else False
+        _div_html = _fig_obj.to_html(
+            full_html=False,
+            include_plotlyjs=_incluir_js,
+            config={"responsive": True, "displaylogo": False},
+        )
+        _bloques_html.append(
+            f"""
+            <section class="card">
+                <h2>{_titulo_fig}</h2>
+                <div class="chart-wrap">{_div_html}</div>
+            </section>
+            """
+        )
+
+    _html_completo = f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reporte de Auditoría — Vista Cliente</title>
     <style>
-    @media print {
-        [data-testid="stSidebar"],
-        [data-testid="stToolbar"],
-        .stButton,
-        .stDownloadButton {
-            display: none !important;
-        }
-        .block-container {
-            max-width: 100% !important;
-            padding-top: 1rem !important;
-        }
-    }
+        body {{
+            margin: 0;
+            padding: 32px 24px;
+            background-color: #0E1117;
+            color: #F3F4F6;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }}
+        .container {{
+            max-width: 1120px;
+            margin: 0 auto;
+        }}
+        .header {{
+            border-bottom: 1px solid #262C36;
+            padding-bottom: 16px;
+            margin-bottom: 28px;
+        }}
+        .header h1 {{
+            margin: 0 0 6px 0;
+            font-size: 26px;
+            color: #FFFFFF;
+        }}
+        .header p {{
+            margin: 0;
+            color: #9CA3AF;
+            font-size: 14px;
+        }}
+        .card {{
+            background-color: #161B22;
+            border: 1px solid #262C36;
+            border-radius: 12px;
+            padding: 20px 22px;
+            margin-bottom: 24px;
+        }}
+        .card h2 {{
+            margin: 0 0 14px 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #F9FAFB;
+        }}
+        .chart-wrap {{
+            width: 100%;
+            overflow-x: auto;
+        }}
     </style>
-    """,
-    unsafe_allow_html=True,
-)
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Reporte de Auditoría y Desempeño</h1>
+            <p>Generado el {_fecha_gen} · Pase el cursor sobre las gráficas para ver el detalle de cada dato</p>
+        </div>
+        {"".join(_bloques_html)}
+    </div>
+</body>
+</html>
+"""
 
-import streamlit.components.v1 as components
+    _html_bytes = io.BytesIO(_html_completo.encode("utf-8"))
 
-st.markdown(
-    """
-    <style>
-    @media print {
-        [data-testid="stSidebar"],
-        [data-testid="stToolbar"],
-        [data-testid="stHeader"],
-        .stButton,
-        .stDownloadButton,
-        iframe {
-            display: none !important;
-        }
-        .block-container {
-            max-width: 100% !important;
-            padding-top: 1rem !important;
-        }
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-if st.button("🖨️ Guardar reporte como PDF", key="btn_imprimir_pdf_reporte"):
-    components.html(
-        """
-        <script>
-            setTimeout(function() {
-                window.parent.print();
-            }, 150);
-        </script>
-        """,
-        height=0,
-        width=0,
+    st.download_button(
+        label=f"🌐 Descargar reporte HTML para cliente ({len(_figuras_reporte)} gráficas)",
+        data=_html_bytes,
+        file_name="reporte_cliente_auditoria.html",
+        mime="text/html",
+        key="btn_descargar_reporte_html_cliente",
     )
+else:
+    st.info("Carga los reportes correspondientes para generar el HTML para el cliente.")
