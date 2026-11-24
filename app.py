@@ -1051,7 +1051,7 @@ if col_impacto and col_impacto in df_visitas.columns:
         else:
             st.info("💡 Por favor cargue el archivo de Consulta Detallada de Contactos en la barra lateral.")
     # --- GRÁFICA DE BARRAS HORIZONTALES APILADAS AL 100% (ORDENADAS POR ESPERADOS) ---
-    st.markdown("### 📊 Distribución Porcentual de Actitud por Producto")
+st.markdown("### 📊 Distribución Porcentual de Actitud por Producto")
     st.markdown("<span style='color: #B7BCC9;'>Comparativa 100% apilada ordenada por volumen de Impactos Esperados.</span>", unsafe_allow_html=True)
 
     if col_prod_visita and col_prod_visita in df_visitas.columns:
@@ -1085,19 +1085,22 @@ if col_impacto and col_impacto in df_visitas.columns:
                 sorted_prods = sorted(prod_esp.keys(), key=lambda x: prod_esp[x])
                 df_pivot['order'] = df_pivot[col_prod_visita].map(lambda x: sorted_prods.index(x) if x in sorted_prods else 999)
                 df_pivot = df_pivot.sort_values(by='order').drop(columns=['order'])
-            except:
+            except Exception:
                 pass
 
         fig_stack_100 = go.Figure()
         for col_name in df_pivot.columns:
             if col_name != col_prod_visita:
+                _vals_pct = df_pivot[col_name].fillna(0.0)
                 fig_stack_100.add_trace(go.Bar(
                     y=df_pivot[col_prod_visita],
-                    x=df_pivot[col_name],
+                    x=_vals_pct,
                     name=col_name,
                     orientation='h',
-                    text=df_pivot[col_name].round(1).astype(str) + '%',
-                    textposition='inside'
+                    text=[f"{v:.1f}%" if v >= 4.0 else "" for v in _vals_pct],
+                    textposition='inside',
+                    insidetextanchor='middle',
+                    textfont=dict(size=14, color='white'),
                 ))
 
         fig_stack_100.update_layout(
@@ -1105,13 +1108,13 @@ if col_impacto and col_impacto in df_visitas.columns:
             template='plotly_dark',
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)',
-            height=500,
+            height=max(500, len(df_pivot) * 42),
             xaxis=dict(title="Porcentaje (%)", range=[0, 100]),
             yaxis=dict(title="Producto", categoryorder='array', categoryarray=df_pivot[col_prod_visita].tolist()),
-            font=dict(color='white'),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            font=dict(color='white', size=13),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=13)),
         )
-        st.plotly_chart(fig_stack_100, use_container_width=True)
+        st.plotly_chart(fig_stack_100, use_container_width=True, key="chart_dist_actitud_producto_100")
     else:
         st.info("No se encontró la columna de productos para generar la gráfica apilada.")
 else:
