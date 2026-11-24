@@ -1206,7 +1206,7 @@ if df_visitas is not None:
                 textinfo="percent+label",
                 direction="clockwise",
                 rotation=90,
-                textfont=dict(color="white", size=11),
+                textfont=dict(color="white", size=14),
                 pull=[0.02] * len(df_promo_counts),
             )
             fig_promo_pie.update_layout(
