@@ -352,60 +352,24 @@ om2.metric("Objetivos Excelentes (SMART)", f"{excelente_smart:,}", f"{(excelente
 om3.metric("Objetivos Bajo", f"{bajo_smart:,}", f"{(bajo_smart/total_obj_eval*100 if total_obj_eval>0 else 0):.1f}%", delta_color="inverse")
 st.markdown("---")
 
-orden_smart = [
-    "0-2 Puntos: Bajo",
-    "3-4 Puntos: Aceptable",
-    "5 Puntos: Excelente (SMART)",
-    "No Definido / Vacío",
-]
-
-df_smart_counts = (
-    df_obj_eval["Smart_Nivel"]
-    .value_counts()
-    .reindex(orden_smart, fill_value=0)
-    .reset_index()
-)
-df_smart_counts.columns = ["Smart_Nivel", "Total"]
-df_smart_counts = df_smart_counts[df_smart_counts["Total"] > 0].copy()
+df_smart_counts = df_obj_eval['Smart_Nivel'].value_counts().reset_index()
+df_smart_counts.columns = ['Smart_Nivel', 'Total']
 
 color_map_smart = {
-    "0-2 Puntos: Bajo": "#FF2D8F",
-    "3-4 Puntos: Aceptable": "#3DD6FF",
-    "5 Puntos: Excelente (SMART)": "#2ECC71",
-    "No Definido / Vacío": "#B7BCC9",
+    '5 Puntos: Excelente (SMART)': '#2ECC71', 
+    '3-4 Puntos: Aceptable': '#3DD6FF', 
+    '0-2 Puntos: Bajo': '#FF2D8F',
+    'No Definido / Vacío': '#B7BCC9'
 }
 
 fig_smart_pie = px.pie(
-    df_smart_counts,
-    names="Smart_Nivel",
-    values="Total",
-    hole=0.45,
-    template="plotly_dark",
-    title="<b>Distribución Global de Niveles SMART en Objetivos</b>",
-    color="Smart_Nivel",
-    color_discrete_map=color_map_smart,
-    category_orders={"Smart_Nivel": orden_smart},
+    df_smart_counts, names='Smart_Nivel', values='Total', 
+    hole=0.5, template='plotly_dark', 
+    title="<b>Distribución Global de Niveles SMART en Objetivos</b>", 
+    color='Smart_Nivel', color_discrete_map=color_map_smart
 )
-fig_smart_pie.update_traces(
-    sort=False,
-    domain=dict(x=[0.18, 0.82], y=[0.14, 0.86]),
-    textposition="outside",
-    texttemplate="%{label}<br>%{percent:.1%}",
-    direction="clockwise",
-    rotation=90,
-    textfont=dict(color="white", size=12),
-    pull=[0.02] * len(df_smart_counts),
-)
-fig_smart_pie.update_layout(
-    paper_bgcolor="rgba(0,0,0,0)",
-    plot_bgcolor="rgba(0,0,0,0)",
-    height=460,
-    font=dict(color="white", size=12),
-    uniformtext=dict(minsize=11, mode="show"),
-    showlegend=False,
-    margin=dict(t=65, b=45, l=40, r=40),
-)
-st.plotly_chart(fig_smart_pie, use_container_width=True, key="chart_1_smart_pie")
+fig_smart_pie.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=450, font=dict(color='white'))
+st.plotly_chart(fig_smart_pie, use_container_width=True)
 
 with st.expander("Ver detalle completo de auditoría de objetivos SMART (por Visita Única) con filtros de nivel y representante"):
     st.caption("Filtra el detalle de visitas únicas según el nivel SMART o el representante de interés.")
