@@ -1234,21 +1234,31 @@ if df_visitas is not None:
             )
             fig_promo_pie.update_traces(
                 sort=False,
-                domain=dict(x=[0.14, 0.86], y=[0.14, 0.86]),
-                textposition="outside",
-                textinfo="percent+label",
+                domain=dict(x=[0.0, 0.68], y=[0.08, 0.92]),
+                textposition="inside",
+                textinfo="percent",
+                insidetextorientation="horizontal",
                 direction="clockwise",
                 rotation=90,
                 textfont=dict(color="white", size=14),
                 pull=[0.02] * len(df_promo_counts),
+                hovertemplate="<b>%{label}</b><br>Visitas: %{value:,}<br>Porcentaje: %{percent}<extra></extra>",
             )
             fig_promo_pie.update_layout(
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(0,0,0,0)",
                 height=430,
-                font=dict(color="white"),
-                showlegend=False,
-                margin=dict(t=55, b=35, l=20, r=20),
+                font=dict(color="white", size=12),
+                showlegend=True,
+                legend=dict(
+                    orientation="v",
+                    yanchor="middle",
+                    y=0.5,
+                    xanchor="left",
+                    x=0.72,
+                    font=dict(color="white", size=12),
+                ),
+                margin=dict(t=55, b=35, l=15, r=20),
             )
             st.plotly_chart(fig_promo_pie, use_container_width=True, key="chart_41_promo_pie")
         else:
