@@ -371,14 +371,14 @@ fig_smart_pie = px.pie(
 fig_smart_pie.update_traces(
     textposition="inside",
     textinfo="percent",
-    textfont=dict(size=15, color="white"),
+    textfont=dict(size=15, color="black"),
     insidetextorientation="horizontal",
 )
 fig_smart_pie.update_layout(
     paper_bgcolor='rgba(0,0,0,0)',
     plot_bgcolor='rgba(0,0,0,0)',
     height=450,
-    font=dict(size=14, color='white'),
+    font=dict(size=14, color='black'),
     legend=dict(
         font=dict(size=14, color='white'),
         title=dict(font=dict(size=15, color='white')),
