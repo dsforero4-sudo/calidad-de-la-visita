@@ -932,7 +932,7 @@ if col_impacto and col_impacto in df_visitas.columns:
             textinfo='percent+label',
             direction='clockwise',
             rotation=90,
-            textfont=dict(color='white', size=11),
+            textfont=dict(color='white', size=14),
             pull=[0.02] * len(df_act_counts),
         )
         fig_pie_actitud.update_layout(
