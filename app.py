@@ -650,84 +650,128 @@ with col_t1:
     else:
         st.info("Carga el archivo de impactos en la barra lateral.")
 
-# --- COLUMNA 2: Torta de Ayudas Visuales ---
-with col_t2:
-    path_av = uploaded_av if uploaded_av is not None else ("Ayudas_visuales.xlsx" if os.path.exists("Ayudas_visuales.xlsx") else None)
-    if path_av is not None:
-        try:
-            if hasattr(path_av, "seek"):
-                path_av.seek(0)
-            df_av_raw = pd.read_excel(path_av, skiprows=2, header=None)
-            df_av_clean = df_av_raw[[4, 15]].copy()
-            df_av_clean.columns = ["Línea", "Ayudas_Visuales"]
-            df_av_clean["Línea"] = df_av_clean["Línea"].fillna("").astype(str).str.strip()
-            df_av_clean = df_av_clean[df_av_clean["Línea"] != ""].copy()
+# --- COLUMNA 2: Barras de uso de AVs ---
+path_av = (
+    uploaded_av
+    if "uploaded_av" in locals() and uploaded_av is not None
+    else ("Ayudas_visuales.xlsx" if os.path.exists("Ayudas_visuales.xlsx") else None)
+)
 
-            # Excluir filas de resumen/totales (ej. "Total", "TOTAL", "Total general")
-            es_fila_total = df_av_clean["Línea"].str.lower().str.startswith("total")
-            df_av_clean = df_av_clean[~es_fila_total].copy()
+if path_av is not None:
+    try:
+        if hasattr(path_av, "seek"):
+            path_av.seek(0)
+        xls_av = pd.ExcelFile(path_av)
+        df_av_raw = pd.read_excel(path_av, sheet_name=xls_av.sheet_names[0], header=None)
 
-            df_av_clean["Ayudas_Visuales"] = pd.to_numeric(df_av_clean["Ayudas_Visuales"], errors="coerce").fillna(0.0)
+        # Localizar columnas por nombre en la fila de encabezados (fila 0), con respaldo por índice
+        encabezados_av = {
+            str(df_av_raw.iloc[0, idx]).strip().lower(): idx
+            for idx in range(df_av_raw.shape[1])
+            if pd.notna(df_av_raw.iloc[0, idx])
+        }
+        idx_linea = encabezados_av.get("línea", encabezados_av.get("linea", 4))
+        idx_vis_tot = encabezados_av.get("visitas totales", 6)
+        idx_pres_av = encabezados_av.get("v. presenciales con av", 11)
+        idx_virt_av = encabezados_av.get("v. virtuales con av", 13)
 
-            df_av_group = df_av_clean.groupby("Línea", as_index=False)["Ayudas_Visuales"].sum()
-            df_av_group = df_av_group[df_av_group["Ayudas_Visuales"] > 0].copy()
-            df_av_group = df_av_group.sort_values(by="Ayudas_Visuales", ascending=False).reset_index(drop=True)
+        df_av_work = df_av_raw.iloc[2:].copy()
+        df_av_work["_Linea"] = df_av_work[idx_linea].fillna("").astype(str).str.strip()
+        df_av_work = df_av_work[
+            (df_av_work["_Linea"] != "")
+            & (~df_av_work["_Linea"].str.lower().str.startswith("total"))
+        ].copy()
 
-            paleta_donas_av = [
-                "#00CC96",  # Esmeralda
-                "#FF2D8F",  # Fucsia
-                "#F39C12",  # Naranja
-                "#7A2CFF",  # Morado
-                "#00B8D9",  # Cian
-                "#FF6B6B",  # Coral
-                "#2962FF",  # Azul intenso
-                "#A3E635",  # Verde lima
-                "#E879F9",  # Lavanda / Orquídea
-                "#FACC15",  # Amarillo dorado
-                "#38BDF8",  # Celeste
-                "#FB7185",  # Rosa salmón
-            ]
+        df_av_work["_Visitas_Totales"] = pd.to_numeric(df_av_work[idx_vis_tot], errors="coerce").fillna(0.0)
+        df_av_work["_Pres_AV"] = pd.to_numeric(df_av_work[idx_pres_av], errors="coerce").fillna(0.0)
+        df_av_work["_Virt_AV"] = pd.to_numeric(df_av_work[idx_virt_av], errors="coerce").fillna(0.0)
+        df_av_work["_Visitas_Con_AV"] = df_av_work["_Pres_AV"] + df_av_work["_Virt_AV"]
 
-            lineas_ordenadas = df_av_group["Línea"].tolist()
-            mapa_colores_av = {
-                linea: paleta_donas_av[i % len(paleta_donas_av)]
-                for i, linea in enumerate(lineas_ordenadas)
-            }
+        df_av_grp = (
+            df_av_work.groupby("_Linea", as_index=False)[
+                ["_Visitas_Totales", "_Pres_AV", "_Virt_AV", "_Visitas_Con_AV"]
+            ].sum()
+        )
+        df_av_grp = df_av_grp[df_av_grp["_Visitas_Totales"] > 0].copy()
 
-            fig_pie_av = px.pie(
-                df_av_group,
-                names="Línea",
-                values="Ayudas_Visuales",
-                hole=0.42,
+        if len(df_av_grp) > 0:
+            df_av_grp["Pct_Con_AV"] = (
+                df_av_grp["_Visitas_Con_AV"] / df_av_grp["_Visitas_Totales"] * 100.0
+            ).round(1)
+            df_av_grp["Pct_Sin_AV"] = (100.0 - df_av_grp["Pct_Con_AV"]).round(1)
+
+            # Ordenar de mayor a menor % de uso de AV (el mayor queda arriba en barras horizontales)
+            df_av_grp = df_av_grp.sort_values(
+                by=["Pct_Con_AV", "_Visitas_Con_AV"], ascending=[False, False]
+            ).reset_index(drop=True)
+
+            orden_lineas_av = df_av_grp["_Linea"].tolist()
+
+            fig_av_linea = go.Figure()
+
+            fig_av_linea.add_trace(
+                go.Bar(
+                    y=df_av_grp["_Linea"],
+                    x=df_av_grp["Pct_Con_AV"],
+                    name="Visitas con AV",
+                    orientation="h",
+                    marker=dict(color="#00CC96"),
+                    text=[f"{v:.1f}%" for v in df_av_grp["Pct_Con_AV"]],
+                    textposition="outside",
+                    textfont=dict(color="#00CC96", size=12),
+                    cliponaxis=False,
+                    customdata=df_av_grp[["_Visitas_Con_AV", "_Visitas_Totales", "_Pres_AV", "_Virt_AV"]].values,
+                    hovertemplate=(
+                        "<b>%{y}</b><br>"
+                        "Visitas con AV: %{customdata[0]:.0f} de %{customdata[1]:.0f} (%{x:.1f}%)<br>"
+                        "Presenciales con AV: %{customdata[2]:.0f} | Virtuales con AV: %{customdata[3]:.0f}"
+                        "<extra></extra>"
+                    ),
+                )
+            )
+
+            fig_av_linea.add_trace(
+                go.Bar(
+                    y=df_av_grp["_Linea"],
+                    x=df_av_grp["Pct_Sin_AV"],
+                    name="Visitas sin AV",
+                    orientation="h",
+                    marker=dict(color="#FF2D8F"),
+                    text=[f"{v:.1f}%" if v >= 5.0 else "" for v in df_av_grp["Pct_Sin_AV"]],
+                    textposition="inside",
+                    insidetextanchor="middle",
+                    textfont=dict(color="white", size=12),
+                    hovertemplate=(
+                        "<b>%{y}</b><br>"
+                        "Porcentaje sin AV: %{x:.1f}%<extra></extra>"
+                    ),
+                )
+            )
+
+            fig_av_linea.update_layout(
+                barmode="stack",
                 template="plotly_dark",
-                title="<b>Ayudas Visuales por Línea</b>",
-                color="Línea",
-                color_discrete_map=mapa_colores_av,
-                category_orders={"Línea": lineas_ordenadas},
-            )
-            fig_pie_av.update_traces(
-                sort=False,
-                domain=dict(x=[0.16, 0.84], y=[0.14, 0.86]),
-                textposition="outside",
-                textinfo="percent+label",
-                direction="clockwise",
-                rotation=90,
-                textfont=dict(color="white", size=11),
-                pull=[0.02] * len(df_av_group),
-            )
-            fig_pie_av.update_layout(
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(0,0,0,0)",
-                height=450,
-                font=dict(color="white"),
-                showlegend=False,
-                margin=dict(t=55, b=35, l=20, r=20),
+                height=max(380, len(orden_lineas_av) * 80),
+                xaxis=dict(title="Porcentaje de Visitas Totales (%)", range=[0, 100]),
+                yaxis=dict(
+                    title="Línea",
+                    categoryorder="array",
+                    categoryarray=orden_lineas_av[::-1],
+                ),
+                font=dict(color="white", size=12),
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                margin=dict(t=60, b=45, l=160, r=60),
+                title="<b>Porcentaje de Uso de Ayudas Visuales por Línea (%)</b>",
             )
-            st.plotly_chart(fig_pie_av, use_container_width=True, key="chart_dona_ayudas_visuales_linea")
-        except Exception as e:
-            st.error(f"Error en torta de ayudas visuales: {e}")
-    else:
-        st.info("Carga el archivo de Ayudas Visuales en la barra lateral.")
+            st.plotly_chart(fig_av_linea, use_container_width=True, key="chart_av_100_linea")
+        else:
+            st.info("No hay visitas totales registradas por línea en el archivo de Ayudas Visuales.")
+    except Exception as e:
+        st.error(f"Error al generar la gráfica de uso de AVs por línea: {e}")
+else:
+    st.info("Carga el archivo de Ayudas Visuales en la barra lateral.")
 # GRÁFICO DE BARRAS HORIZONTALES (ÚLTIMA POSICIÓN)
 # ==========================================
 st.markdown("### Top Impactos Promocionales: Realizados vs Esperados")
