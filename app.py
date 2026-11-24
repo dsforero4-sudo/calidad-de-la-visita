@@ -1394,8 +1394,7 @@ if df_visitas is not None:
         )
         st.plotly_chart(fig_mock_cat, use_container_width=True, key="chart_42_promo_categoria_mock")
 # ------------------------------------------
-    # --- 4.3 GRÁFICA DE BARRAS HORIZONTALES APILADAS AL 100% + CAJONES DE CONTEXTO ---
-    st.markdown("### Entrega Promocional según Actitud en la Promoción del Producto")
+    # --- 4.3 GRÁFICA DE BARRAS HORIZONTALES APILADAS AL 100% + CAJONES DE CONTEXTO ---st.markdown("### Entrega Promocional según Actitud en la Promoción del Producto")
 st.markdown(
     "<span style='color: #B7BCC9;'>Porcentaje de registros/promociones con entrega de elemento promocional frente a sin entrega, según la actitud detectada.</span>",
     unsafe_allow_html=True,
@@ -1407,9 +1406,28 @@ def _es_promo_valido_act(val):
     ]
 
 if df_visitas is not None and len(df_visitas) > 0 and "col_impacto" in locals() and col_impacto in df_visitas.columns:
-    _df_base_act_promo = df_filtered.copy() if ("df_filtered" in locals() and df_filtered is not None) else df_visitas.copy()
+    # Universo completo de visitas únicas del corte (ej. 5,106)
+    if "df_unique" in locals() and df_unique is not None and len(df_unique) > 0:
+        _visitas_totales_ctx = (
+            int(df_unique[col_visita].nunique())
+            if ("col_visita" in locals() and col_visita and col_visita in df_unique.columns)
+            else len(df_unique)
+        )
+    else:
+        _df_ref = df_filtered if ("df_filtered" in locals() and df_filtered is not None) else df_visitas
+        _visitas_totales_ctx = (
+            int(_df_ref[col_visita].nunique())
+            if ("col_visita" in locals() and col_visita and col_visita in _df_ref.columns)
+            else len(_df_ref)
+        )
 
-    # Si existe columna de producto promocionado, filtramos filas con producto válido para enfocar en la promoción del producto
+    _df_base_act_promo = (
+        df_filtered.copy()
+        if ("df_filtered" in locals() and df_filtered is not None)
+        else df_visitas.copy()
+    )
+
+    # Filtrar filas con producto promocionado válido para enfocar en la promoción del producto
     if "col_prod_visita" in locals() and col_prod_visita and col_prod_visita in _df_base_act_promo.columns:
         _df_prod_ok = _df_base_act_promo[_df_base_act_promo[col_prod_visita].notna()].copy()
         _df_prod_ok["_Prod_Str"] = _df_prod_ok[col_prod_visita].astype(str).str.strip()
@@ -1432,12 +1450,6 @@ if df_visitas is not None and len(df_visitas) > 0 and "col_impacto" in locals() 
     else:
         _df_base_act_promo["_Estado_Promo"] = "No Entregado"
 
-    # Métricas de contexto
-    _visitas_unicas_ctx = (
-        int(_df_base_act_promo[col_visita].nunique())
-        if ("col_visita" in locals() and col_visita and col_visita in _df_base_act_promo.columns)
-        else len(_df_base_act_promo)
-    )
     _total_eval_ctx = len(_df_base_act_promo)
     _pct_entregado_global = (
         (_df_base_act_promo["_Estado_Promo"] == "Entregado").mean() * 100.0
@@ -1446,16 +1458,19 @@ if df_visitas is not None and len(df_visitas) > 0 and "col_impacto" in locals() 
     )
 
     _ct_act_promo = (
-        pd.crosstab(_df_base_act_promo["_Actitud"], _df_base_act_promo["_Estado_Promo"], normalize="index") * 100.0
+        pd.crosstab(_df_base_act_promo["_Actitud"], _df_base_act_promo["_Estado_Promo"], normalize="index")
+        * 100.0
     )
     for _est in ["Entregado", "No Entregado"]:
         if _est not in _ct_act_promo.columns:
             _ct_act_promo[_est] = 0.0
 
     # Ordenar por % Entregado descendente (mayor arriba en barra horizontal)
-    _ct_act_promo = _ct_act_promo[["Entregado", "No Entregado"]].sort_values(
-        by="Entregado", ascending=False
-    ).reset_index()
+    _ct_act_promo = (
+        _ct_act_promo[["Entregado", "No Entregado"]]
+        .sort_values(by="Entregado", ascending=False)
+        .reset_index()
+    )
 
     _orden_actitudes = _ct_act_promo["_Actitud"].tolist()
     _colores_promo_act = {
@@ -1502,7 +1517,7 @@ if df_visitas is not None and len(df_visitas) > 0 and "col_impacto" in locals() 
     with col_g_act_p:
         st.plotly_chart(fig_act_promo_100, use_container_width=True, key="chart_actitud_entrega_promo_100")
     with col_k_act_p:
-        st.metric("Visitas Únicas", f"{_visitas_unicas_ctx:,}")
+        st.metric("Visitas Totales", f"{_visitas_totales_ctx:,}")
         st.markdown("<br>", unsafe_allow_html=True)
         st.metric("Promociones Evaluadas", f"{_total_eval_ctx:,}")
         st.markdown("<br>", unsafe_allow_html=True)
