@@ -1383,7 +1383,7 @@ if df_visitas is not None:
                     text=txts,
                     textposition="inside",
                     insidetextanchor="middle",
-                    textfont=dict(color="white", size=11),
+                    textfont=dict(color="#000000", size=14),
                 )
             )
 
@@ -1430,7 +1430,7 @@ if df_visitas is not None:
                     text=txts,
                     textposition="inside",
                     insidetextanchor="middle",
-                    textfont=dict(color="white", size=11),
+                    textfont=dict(color="#000000", size=14),
                 )
             )
 
