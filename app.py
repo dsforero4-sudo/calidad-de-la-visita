@@ -1684,7 +1684,6 @@ if _df_base_45 is not None and _df_uniq_45 is not None:
 
         st.markdown("---")
 
-        # Dona global del nivel metodológico antes de la gráfica por representante
         orden_metodo = [
             "Visita Sobresaliente (Metodología Dominada)",
             "En Proceso de Apropiación",
@@ -1725,8 +1724,70 @@ if _df_base_45 is not None and _df_uniq_45 is not None:
             insidetextorientation="horizontal",
         )
         fig_metodo_dona.update_layout(
-            paper_bgcolor="rgba(0,0
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            height=430,
+            font=dict(color="white"),
+            legend_title="Nivel Metodológico",
+        )
+        st.plotly_chart(fig_metodo_dona, use_container_width=True, key="chart_45_metodo_dona")
 
+        rep_col_uso = col_rep_45 if col_rep_45 in df_audit_tec.columns else None
+        if rep_col_uso:
+            df_audit_tec["_Rep_Audit"] = (
+                df_audit_tec[rep_col_uso].fillna("Sin Representante").astype(str).str.strip()
+            )
+            df_rep_metodo = (
+                df_audit_tec.groupby(["_Rep_Audit", "Estado_Metodologico"], as_index=False)
+                .size()
+                .rename(columns={"size": "Total"})
+            )
+            df_rep_totales = (
+                df_rep_metodo.groupby("_Rep_Audit", as_index=False)["Total"]
+                .sum()
+                .rename(columns={"Total": "Total_Rep"})
+            )
+            df_rep_metodo = pd.merge(df_rep_metodo, df_rep_totales, on="_Rep_Audit")
+            df_rep_metodo["Porcentaje"] = (
+                df_rep_metodo["Total"] / df_rep_metodo["Total_Rep"] * 100
+            ).round(1)
+
+            def formato_etiqueta(row):
+                if row["Porcentaje"] >= 5.0:
+                    return f"{row['Total']} ({row['Porcentaje']}%)"
+                return ""
+
+            df_rep_metodo["Texto_Barra"] = df_rep_metodo.apply(formato_etiqueta, axis=1)
+            n_reps_45 = df_audit_tec["_Rep_Audit"].nunique()
+
+            fig_metodo = px.bar(
+                df_rep_metodo,
+                x="Total",
+                y="_Rep_Audit",
+                color="Estado_Metodologico",
+                barmode="stack",
+                text="Texto_Barra",
+                template="plotly_dark",
+                title="<b>Adopción de la Técnica de Ventas por Representante (Penalización Estricta por Copia)</b>",
+                color_discrete_map=mapa_colores_45,
+                orientation="h",
+            )
+            fig_metodo.update_traces(
+                textposition="inside",
+                insidetextanchor="middle",
+                textfont_size=11,
+                textfont_color="white",
+            )
+            fig_metodo.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                height=max(450, n_reps_45 * 25),
+                xaxis_title="Cantidad de Visitas Únicas",
+                yaxis_title="Representante",
+                yaxis={"categoryorder": "total ascending"},
+                legend_title="Nivel Metodológico",
+                font=dict(color="white"),
+                margin=dict(t=50
 # ==========================================
 # SECCIÓN 5: HÁBITO DE REPORTE
 # ==========================================
