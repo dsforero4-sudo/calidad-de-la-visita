@@ -477,7 +477,7 @@ pct_copia = (comentarios_repetidos / total_comentarios * 100) if total_comentari
 
 ckpi1, ckpi2, ckpi3 = st.columns(3)
 ckpi1.metric("Visitas Únicas Evaluadas", f"{total_comentarios:,}")
-ckpi2.metric("Objetivos Autorrepetidos", f"{comentarios_repetidos:,}")
+ckpi2.metric("Objetivos Repetidos", f"{comentarios_repetidos:,}")
 ckpi3.metric("% Índice Global Copy-Paste (Objetivos)", f"{pct_copia:.1f}%")
 st.markdown("---")
 
