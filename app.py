@@ -1228,9 +1228,12 @@ if df_visitas is not None:
     # ------------------------------------------
     # 4.2. Barras Apiladas al 100% por Categoría del Panel
     # ------------------------------------------
+    # ------------------------------------------
+    # 4.2. Barras Apiladas al 100% por Categoría del Panel
+    # ------------------------------------------
     st.markdown("### 4.2. Entrega Promocional por Categoría del Panel")
     st.markdown(
-        "<span style='color: #B7BCC9;'>Distribución porcentual (Entregado vs. No Entregado) a lo largo de las categorías del panel.</span>",
+        "<span style='color: #B7BCC9;'>Distribución porcentual de visitas únicas (Entregado vs. No Entregado) a lo largo de las categorías del panel.</span>",
         unsafe_allow_html=True,
     )
 
@@ -1238,26 +1241,64 @@ if df_visitas is not None:
         "Entregado": "#00CC96",
         "No Entregado": "#FF2D8F",
     }
-    categorias_ordenadas = ["TOP", "AAA", "AA", "A", "BBB", "BB", "B", "CCC", "CC", "C"]
+    categorias_ordenadas = ["TOP", "AAA", "AA", "A", "BBB", "BB", "B", "CCC", "CC", "C", "SIN CATEGORÍA"]
 
     col_cat_panel = buscar_columna(
         df_visitas,
         ["Categoría Panel", "Categoria Panel", "Clasificación", "Segmento", "Categoría"],
     )
+    col_id_visita_42 = buscar_columna(
+        df_visitas,
+        ["Cod. visita", "Código visita", "Cod visita", "Id visita", "ID Visita", "Visita única", "Visita"],
+    )
+
+    def _es_promo_valido_42(val):
+        return pd.notna(val) and str(val).strip().lower() not in ["", "-", "0", "nan", "none", "no", "sin material"]
 
     if col_cat_panel and col_cat_panel in df_visitas.columns:
-        df_cat_data = df_visitas.copy()
-        df_cat_data["Cat_Clean"] = df_cat_data[col_cat_panel].fillna("").astype(str).str.strip().str.upper()
-        df_cat_data = df_cat_data[df_cat_data["Cat_Clean"] != ""].copy()
+        _df_base_42 = df_filtered if "df_filtered" in locals() and df_filtered is not None else df_visitas
+        _df_42_work = _df_base_42.copy()
 
-        if col_promo and col_promo in df_cat_data.columns:
-            df_cat_data["Promo_Status"] = df_cat_data[col_promo].apply(
-                lambda x: "Entregado"
-                if pd.notna(x) and str(x).strip().lower() not in ["", "-", "0", "nan", "none", "no", "sin material"]
-                else "No Entregado"
-            )
+        _df_42_work["_Tiene_Promo_Bool"] = (
+            _df_42_work[col_promo].apply(_es_promo_valido_42)
+            if ("col_promo" in locals() and col_promo and col_promo in _df_42_work.columns)
+            else False
+        )
+
+        if "df_unique" in locals() and df_unique is not None and len(df_unique) > 0:
+            df_cat_data = df_unique.copy()
+            if col_id_visita_42 and col_id_visita_42 in _df_42_work.columns and col_id_visita_42 in df_cat_data.columns:
+                ids_con_promo_42 = set(
+                    _df_42_work.loc[_df_42_work["_Tiene_Promo_Bool"], col_id_visita_42].dropna()
+                )
+                df_cat_data["_Tiene_Promo_Bool"] = df_cat_data[col_id_visita_42].isin(ids_con_promo_42)
+            elif "col_promo" in locals() and col_promo and col_promo in df_cat_data.columns:
+                df_cat_data["_Tiene_Promo_Bool"] = df_cat_data[col_promo].apply(_es_promo_valido_42)
+            else:
+                df_cat_data["_Tiene_Promo_Bool"] = False
         else:
-            df_cat_data["Promo_Status"] = "No Entregado"
+            if col_id_visita_42 and col_id_visita_42 in _df_42_work.columns:
+                ids_con_promo_42 = set(
+                    _df_42_work.loc[_df_42_work["_Tiene_Promo_Bool"], col_id_visita_42].dropna()
+                )
+                df_cat_data = _df_42_work.drop_duplicates(subset=[col_id_visita_42]).copy()
+                df_cat_data["_Tiene_Promo_Bool"] = df_cat_data[col_id_visita_42].isin(ids_con_promo_42)
+            else:
+                df_cat_data = _df_42_work.drop_duplicates().copy()
+
+        if col_cat_panel in df_cat_data.columns:
+            df_cat_data["Cat_Clean"] = (
+                df_cat_data[col_cat_panel].fillna("SIN CATEGORÍA").astype(str).str.strip().str.upper()
+            )
+            df_cat_data.loc[
+                df_cat_data["Cat_Clean"].isin(["", "-", "NAN", "NONE", "NULL"]), "Cat_Clean"
+            ] = "SIN CATEGORÍA"
+        else:
+            df_cat_data["Cat_Clean"] = "SIN CATEGORÍA"
+
+        df_cat_data["Promo_Status"] = df_cat_data["_Tiene_Promo_Bool"].apply(
+            lambda ok: "Entregado" if ok else "No Entregado"
+        )
 
         df_cat_pivot = (
             pd.crosstab(df_cat_data["Cat_Clean"], df_cat_data["Promo_Status"], normalize="index") * 100
@@ -1296,7 +1337,7 @@ if df_visitas is not None:
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
             height=480,
-            xaxis=dict(title="Porcentaje (%)", range=[0, 100]),
+            xaxis=dict(title="Porcentaje de Visitas Únicas (%)", range=[0, 100]),
             yaxis=dict(
                 title="Categoría del Panel",
                 categoryorder="array",
