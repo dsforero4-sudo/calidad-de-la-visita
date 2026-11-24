@@ -1684,165 +1684,48 @@ if _df_base_45 is not None and _df_uniq_45 is not None:
 
         st.markdown("---")
 
-        rep_col_uso = col_rep_45 if col_rep_45 in df_audit_tec.columns else None
-        if rep_col_uso:
-            df_audit_tec["_Rep_Audit"] = (
-                df_audit_tec[rep_col_uso].fillna("Sin Representante").astype(str).str.strip()
-            )
-            df_rep_metodo = (
-                df_audit_tec.groupby(["_Rep_Audit", "Estado_Metodologico"], as_index=False)
-                .size()
-                .rename(columns={"size": "Total"})
-            )
-            df_rep_totales = (
-                df_rep_metodo.groupby("_Rep_Audit", as_index=False)["Total"]
-                .sum()
-                .rename(columns={"Total": "Total_Rep"})
-            )
-            df_rep_metodo = pd.merge(df_rep_metodo, df_rep_totales, on="_Rep_Audit")
-            df_rep_metodo["Porcentaje"] = (
-                df_rep_metodo["Total"] / df_rep_metodo["Total_Rep"] * 100
-            ).round(1)
+        # Dona global del nivel metodológico antes de la gráfica por representante
+        orden_metodo = [
+            "Visita Sobresaliente (Metodología Dominada)",
+            "En Proceso de Apropiación",
+            "Riesgo Metodológico (Alerta)",
+        ]
 
-            def formato_etiqueta(row):
-                if row["Porcentaje"] >= 5.0:
-                    return f"{row['Total']} ({row['Porcentaje']}%)"
-                return ""
+        df_metodo_global = (
+            df_audit_tec["Estado_Metodologico"]
+            .value_counts()
+            .reindex(orden_metodo, fill_value=0)
+            .reset_index()
+        )
+        df_metodo_global.columns = ["Estado_Metodologico", "Total"]
+        df_metodo_global = df_metodo_global[df_metodo_global["Total"] > 0].copy()
 
-            df_rep_metodo["Texto_Barra"] = df_rep_metodo.apply(formato_etiqueta, axis=1)
-            n_reps_45 = df_audit_tec["_Rep_Audit"].nunique()
+        mapa_colores_45 = {
+            "Visita Sobresaliente (Metodología Dominada)": "#00CC96",
+            "En Proceso de Apropiación": "#F39C12",
+            "Riesgo Metodológico (Alerta)": "#FF2D8F",
+        }
 
-            mapa_colores_45 = {
-                "Visita Sobresaliente (Metodología Dominada)": "#00CC96",
-                "En Proceso de Apropiación": "#F39C12",
-                "Riesgo Metodológico (Alerta)": "#FF2D8F",
-            }
-
-            fig_metodo = px.bar(
-                df_rep_metodo,
-                x="Total",
-                y="_Rep_Audit",
-                color="Estado_Metodologico",
-                barmode="stack",
-                text="Texto_Barra",
-                template="plotly_dark",
-                title="<b>Adopción de la Técnica de Ventas por Representante (Penalización Estricta por Copia)</b>",
-                color_discrete_map=mapa_colores_45,
-                orientation="h",
-            )
-            fig_metodo.update_traces(
-                textposition="inside",
-                insidetextanchor="middle",
-                textfont_size=11,
-                textfont_color="white",
-            )
-            fig_metodo.update_layout(
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
-                height=max(450, n_reps_45 * 25),
-                xaxis_title="Cantidad de Visitas Únicas",
-                yaxis_title="Representante",
-                yaxis={"categoryorder": "total ascending"},
-                legend_title="Nivel Metodológico",
-                font=dict(color="white"),
-                margin=dict(t=50, b=50, l=150, r=40),
-            )
-            st.plotly_chart(fig_metodo, use_container_width=True)
-
-        with st.expander("🔍 Ver detalle completo de auditoría (por Visita Única) con filtros de calidad y representante"):
-            st.markdown(
-                "<span style='color: #9AA5B1; font-size: 13px;'>Filtra el detalle de visitas únicas según el nivel metodológico o el representante de interés.</span>",
-                unsafe_allow_html=True,
-            )
-
-            col_f_niv, col_f_rep = st.columns(2)
-            niveles_disponibles = ["Todos"] + sorted(
-                df_audit_tec["Estado_Metodologico"].dropna().unique().tolist()
-            )
-            with col_f_niv:
-                filtro_nivel_sel = st.selectbox(
-                    "Filtrar por Nivel Metodológico",
-                    options=niveles_disponibles,
-                    key="select_filtro_nivel_45",
-                )
-
-            reps_disponibles_audit = (
-                ["Todos"] + sorted(df_audit_tec["_Rep_Audit"].dropna().unique().tolist())
-                if "_Rep_Audit" in df_audit_tec.columns
-                else ["Todos"]
-            )
-            with col_f_rep:
-                filtro_rep_sel = st.selectbox(
-                    "Filtrar por Representante",
-                    options=reps_disponibles_audit,
-                    key="select_filtro_rep_audit_45",
-                )
-
-            df_tabla_filtrada = df_audit_tec.copy()
-            if filtro_nivel_sel != "Todos":
-                df_tabla_filtrada = df_tabla_filtrada[
-                    df_tabla_filtrada["Estado_Metodologico"] == filtro_nivel_sel
-                ]
-            if filtro_rep_sel != "Todos" and "_Rep_Audit" in df_tabla_filtrada.columns:
-                df_tabla_filtrada = df_tabla_filtrada[
-                    df_tabla_filtrada["_Rep_Audit"] == filtro_rep_sel
-                ]
-
-            col_nombres_med = buscar_columna(_df_base_45, ["Nombres", "Nombre"])
-            if col_nombres_med is None and len(_df_base_45.columns) > 14:
-                col_nombres_med = _df_base_45.columns[14]
-
-            col_apellidos_med = buscar_columna(_df_base_45, ["Apellidos", "Apellido"])
-            if col_apellidos_med is None and len(_df_base_45.columns) > 15:
-                col_apellidos_med = _df_base_45.columns[15]
-
-            col_nombre_completo_med = None
-            has_nom = bool(col_nombres_med and col_nombres_med in df_tabla_filtrada.columns)
-            has_ape = bool(col_apellidos_med and col_apellidos_med in df_tabla_filtrada.columns)
-            if has_nom or has_ape:
-                _n = (
-                    df_tabla_filtrada[col_nombres_med].fillna("").astype(str).str.strip()
-                    if has_nom
-                    else ""
-                )
-                _a = (
-                    df_tabla_filtrada[col_apellidos_med].fillna("").astype(str).str.strip()
-                    if has_ape
-                    else ""
-                )
-                df_tabla_filtrada["Nombre Médico"] = (_n + " " + _a).str.strip()
-                col_nombre_completo_med = "Nombre Médico"
-
-            st.caption(f"Mostrando {len(df_tabla_filtrada):,} registros filtrados.")
-
-            if len(df_tabla_filtrada) > 0:
-                cols_base = [
-                    "_Rep_Audit",
-                    col_cod_v,
-                    col_fecha_v,
-                    col_med_v,
-                    col_nombre_completo_med,
-                    col_comentario_v,
-                    "Calidad_Comentario",
-                    "Justificacion_Comentario",
-                    col_objetivo_w,
-                    "Calidad_Objetivo",
-                    "Justificacion_Objetivo",
-                    "Estado_Metodologico",
-                ]
-                cols_mostrar = []
-                for c in cols_base:
-                    if c and c in df_tabla_filtrada.columns and c not in cols_mostrar:
-                        cols_mostrar.append(c)
-
-                st.dataframe(df_tabla_filtrada[cols_mostrar], use_container_width=True, hide_index=True)
-            else:
-                st.info("No hay visitas únicas que coincidan con esa combinación de filtros.")
-    else:
-        st.warning("⚠️ No se pudieron localizar las columnas de Comentario y Objetivo en el archivo cargado.")
-else:
-    st.info("👈 Carga el **Listado de Visitas** en la barra lateral para ejecutar la auditoría metodológica.")
-
+        fig_metodo_dona = px.pie(
+            df_metodo_global,
+            names="Estado_Metodologico",
+            values="Total",
+            hole=0.5,
+            template="plotly_dark",
+            title="<b>Distribución General del Nivel Metodológico (Visitas Únicas)</b>",
+            color="Estado_Metodologico",
+            color_discrete_map=mapa_colores_45,
+            category_orders={"Estado_Metodologico": orden_metodo},
+        )
+        fig_metodo_dona.update_traces(
+            sort=False,
+            textposition="inside",
+            textinfo="percent",
+            textfont=dict(color="white", size=14),
+            insidetextorientation="horizontal",
+        )
+        fig_metodo_dona.update_layout(
+            paper_bgcolor="rgba(0,0
 
 # ==========================================
 # SECCIÓN 5: HÁBITO DE REPORTE
