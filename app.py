@@ -137,6 +137,13 @@ st.markdown(
         font-size: 28px !important;
         font-weight: bold !important;
     }
+    [data-testid="stMetricDelta"] svg {
+        display: none !important;
+    }
+    [data-testid="stMetricDelta"] {
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+    }
     </style>
     """, 
     unsafe_allow_html=True
