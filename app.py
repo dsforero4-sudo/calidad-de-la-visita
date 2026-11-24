@@ -322,7 +322,7 @@ def evaluar_smart_detallado(txt):
         detalles.append("T(-)")
 
     if puntos <= 2:
-        nivel = "0-2 Puntos: Bajo / No Definido"
+        nivel = "0-2 Puntos: Bajo"
     elif puntos <= 4:
         nivel = "3-4 Puntos: Aceptable"
     else:
@@ -342,7 +342,7 @@ bajo_smart = len(df_obj_eval[df_obj_eval['Smart_Puntaje'] <= 2])
 om1, om2, om3 = st.columns(3)
 om1.metric("Visitas Evaluadas (Objetivos)", f"{total_obj_eval:,}")
 om2.metric("Objetivos Excelentes (SMART)", f"{excelente_smart:,}", f"{(excelente_smart/total_obj_eval*100 if total_obj_eval>0 else 0):.1f}%")
-om3.metric("Objetivos Bajo / No Definidos", f"{bajo_smart:,}", f"{(bajo_smart/total_obj_eval*100 if total_obj_eval>0 else 0):.1f}%", delta_color="inverse")
+om3.metric("Objetivos Bajo", f"{bajo_smart:,}", f"{(bajo_smart/total_obj_eval*100 if total_obj_eval>0 else 0):.1f}%", delta_color="inverse")
 st.markdown("---")
 
 df_smart_counts = df_obj_eval['Smart_Nivel'].value_counts().reset_index()
@@ -351,7 +351,7 @@ df_smart_counts.columns = ['Smart_Nivel', 'Total']
 color_map_smart = {
     '5 Puntos: Excelente (SMART)': '#2ECC71', 
     '3-4 Puntos: Aceptable': '#3DD6FF', 
-    '0-2 Puntos: Bajo / No Definido': '#FF2D8F',
+    '0-2 Puntos: Bajo': '#FF2D8F',
     'No Definido / Vacío': '#B7BCC9'
 }
 
