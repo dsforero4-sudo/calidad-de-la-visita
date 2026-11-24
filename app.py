@@ -363,12 +363,27 @@ color_map_smart = {
 }
 
 fig_smart_pie = px.pie(
-    df_smart_counts, names='Smart_Nivel', values='Total', 
-    hole=0.5, template='plotly_dark', 
-    title="<b>Distribución Global de Niveles SMART en Objetivos</b>", 
+    df_smart_counts, names='Smart_Nivel', values='Total',
+    hole=0.5, template='plotly_dark',
+    title="<b>Distribución Global de Niveles SMART en Objetivos</b>",
     color='Smart_Nivel', color_discrete_map=color_map_smart
 )
-fig_smart_pie.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=450, font=dict(color='white'))
+fig_smart_pie.update_traces(
+    textposition="inside",
+    textinfo="percent",
+    textfont=dict(size=15, color="white"),
+    insidetextorientation="horizontal",
+)
+fig_smart_pie.update_layout(
+    paper_bgcolor='rgba(0,0,0,0)',
+    plot_bgcolor='rgba(0,0,0,0)',
+    height=450,
+    font=dict(size=14, color='white'),
+    legend=dict(
+        font=dict(size=14, color='white'),
+        title=dict(font=dict(size=15, color='white')),
+    ),
+)
 st.plotly_chart(fig_smart_pie, use_container_width=True)
 
 with st.expander("Ver detalle completo de auditoría de objetivos SMART (por Visita Única) con filtros de nivel y representante"):
