@@ -755,7 +755,7 @@ if path_av is not None:
                     text=[f"{v:.1f}%" if v >= 5.0 else "" for v in df_av_grp["Pct_Sin_AV"]],
                     textposition="inside",
                     insidetextanchor="middle",
-                    textfont=dict(color="white", size=12),
+                    textfont=dict(color="white", size=15),
                     hovertemplate=(
                         "<b>%{y}</b><br>"
                         "Porcentaje sin AV: %{x:.1f}%<extra></extra>"
