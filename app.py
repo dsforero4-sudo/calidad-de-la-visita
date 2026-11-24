@@ -1858,7 +1858,7 @@ st.markdown("---")
 # ------------------------------------------
 # 5.1. Franja horaria
 # ------------------------------------------
-st.markdown("### 5.1. Franja horaria")
+st.markdown("### 5.1. Data Freshness")
 st.markdown(
     "<span style='color: #9AA5B1;'>Distribución de visitas únicas según la franja del día en que se reportan: Mañana (6:00 a. m. - 12:00 p. m.), Tarde (12:00 p. m. - 6:00 p. m.) y Noche (después de las 6:00 p. m.).</span>",
     unsafe_allow_html=True,
