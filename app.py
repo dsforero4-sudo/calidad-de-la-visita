@@ -496,7 +496,7 @@ fig_bar_copia = px.bar(
     color='Pct_Copia', color_continuous_scale=[[0.0, '#3DD6FF'], [0.4, '#7A2CFF'], [0.8, '#FF2D8F'], [1.0, '#9B2C2C']],
     range_color=[0, 100], orientation='h'
 )
-fig_bar_copia.update_traces(texttemplate='%{text}%', textposition='outside', textfont_size=11)
+fig_bar_copia.update_traces(texttemplate='%{text}%', textposition='outside', textfont_size=15)
 fig_bar_copia.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=max(450, len(rep_copia)*25), font=dict(color='white'))
 st.plotly_chart(fig_bar_copia, use_container_width=True)
 # ==========================================
