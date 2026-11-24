@@ -1050,10 +1050,7 @@ if col_impacto and col_impacto in df_visitas.columns:
                 st.info("💡 No se encontró la columna de Nivel de Adopción en el archivo cargado.")
         else:
             st.info("💡 Por favor cargue el archivo de Consulta Detallada de Contactos en la barra lateral.")
-    # --- GRÁFICA DE BARRAS HORIZONTALES APILADAS AL 100% (ORDENADAS POR ESPERADOS) ---
-st.markdown("### 📊 Distribución Porcentual de Actitud por Producto")
-    st.markdown("<span style='color: #B7BCC9;'>Comparativa 100% apilada ordenada por volumen de Impactos Esperados.</span>", unsafe_allow_html=True)
-
+# --- GRÁFICA DE BARRAS HORIZONTALES APILADAS AL 100% (ORDENADAS POR ESPERADOS) ---
 if col_impacto and col_impacto in df_visitas.columns:
     st.markdown("### 📊 Distribución Porcentual de Actitud por Producto")
     st.markdown("<span style='color: #B7BCC9;'>Comparativa 100% apilada ordenada por volumen de Impactos Esperados.</span>", unsafe_allow_html=True)
@@ -1070,7 +1067,11 @@ if col_impacto and col_impacto in df_visitas.columns:
         df_pivot = df_pivot.reset_index()
 
         # Ordenar por impactos esperados
-        path_imp = uploaded_impactos if uploaded_impactos is not None else ('Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx' if os.path.exists('Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx') else None)
+        path_imp = (
+            uploaded_impactos
+            if "uploaded_impactos" in locals() and uploaded_impactos is not None
+            else ('Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx' if os.path.exists('Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx') else None)
+        )
 
         if path_imp is not None:
             try:
@@ -1086,7 +1087,11 @@ if col_impacto and col_impacto in df_visitas.columns:
                     prod = str(prod).strip()
                     if prod in ['', '-']:
                         continue
-                    esp_sum = sum(float(df_imp_raw.iloc[r, c]) for c in esp_cols if pd.notna(df_imp_raw.iloc[r, c]) and df_imp_raw.iloc[r, c] != '-')
+                    esp_sum = sum(
+                        float(df_imp_raw.iloc[r, c])
+                        for c in esp_cols
+                        if pd.notna(df_imp_raw.iloc[r, c]) and df_imp_raw.iloc[r, c] != '-'
+                    )
                     if esp_sum > 0:
                         prod_esp[prod] = prod_esp.get(prod, 0) + esp_sum
 
@@ -1108,7 +1113,7 @@ if col_impacto and col_impacto in df_visitas.columns:
                     text=[f"{v:.1f}%" if v >= 4.0 else "" for v in _vals_pct],
                     textposition='inside',
                     insidetextanchor='middle',
-                    textfont=dict(size=14, color='white'),
+                    textfont=dict(size=15, color='white'),
                 ))
 
         fig_stack_100.update_layout(
@@ -1116,7 +1121,7 @@ if col_impacto and col_impacto in df_visitas.columns:
             template='plotly_dark',
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)',
-            height=max(500, len(df_pivot) * 42),
+            height=max(500, len(df_pivot) * 44),
             xaxis=dict(title="Porcentaje (%)", range=[0, 100]),
             yaxis=dict(title="Producto", categoryorder='array', categoryarray=df_pivot[col_prod_visita].tolist()),
             font=dict(color='white', size=13),
@@ -1127,7 +1132,6 @@ if col_impacto and col_impacto in df_visitas.columns:
         st.info("No se encontró la columna de productos para generar la gráfica apilada.")
 else:
     st.warning("⚠️ No se encontró la columna 'Comentario de Impacto' en el archivo de visitas cargado.")
-
 # ==========================================
 # SECCIÓN 4: MANEJO DE LA ACTITUD, PROPUESTA Y CIERRE
 # ==========================================
