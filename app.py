@@ -1225,9 +1225,7 @@ if df_visitas is not None:
         )
 
     st.markdown("---")
-    # ------------------------------------------
-    # 4.2. Barras Apiladas al 100% por Categoría del Panel
-    # ------------------------------------------
+    
     # ------------------------------------------
     # 4.2. Barras Apiladas al 100% por Categoría del Panel
     # ------------------------------------------
@@ -1396,97 +1394,121 @@ if df_visitas is not None:
         )
         st.plotly_chart(fig_mock_cat, use_container_width=True, key="chart_42_promo_categoria_mock")
 # ------------------------------------------
-    # --- GRÁFICA DE BARRAS HORIZONTALES APILADAS AL 100% + CAJONES DE CONTEXTO ---
-    st.markdown("### 📊 Distribución Porcentual de Actitud por Producto")
-    st.markdown("<span style='color: #B7BCC9;'>Comparativa 100% apilada ordenada por volumen de Impactos Esperados.</span>", unsafe_allow_html=True)
+    # --- 4.3 GRÁFICA DE BARRAS HORIZONTALES APILADAS AL 100% + CAJONES DE CONTEXTO ---
+    st.markdown("### Entrega Promocional según Actitud en la Promoción del Producto")
+st.markdown(
+    "<span style='color: #B7BCC9;'>Porcentaje de registros/promociones con entrega de elemento promocional frente a sin entrega, según la actitud detectada.</span>",
+    unsafe_allow_html=True,
+)
 
-    if col_prod_visita and col_prod_visita in df_visitas.columns:
-        df_bar_data = df_visitas.copy()
-        df_bar_data[col_prod_visita] = df_bar_data[col_prod_visita].astype(str).str.strip()
-        df_bar_data = df_bar_data[~df_bar_data[col_prod_visita].isin(['', '-'])]
+def _es_promo_valido_act(val):
+    return pd.notna(val) and str(val).strip().lower() not in [
+        "", "-", "0", "nan", "none", "no", "sin material", "ninguno", "n/a"
+    ]
 
-        df_bar_data['Comentario_Clean'] = df_bar_data[col_impacto].fillna('Sin sondeo').astype(str).str.strip()
-        df_bar_data['Comentario_Clean'] = df_bar_data['Comentario_Clean'].replace(['-', '', 'nan', 'none', 'NaN', 'NAN'], 'Sin sondeo')
+if df_visitas is not None and len(df_visitas) > 0 and "col_impacto" in locals() and col_impacto in df_visitas.columns:
+    _df_base_act_promo = df_filtered.copy() if ("df_filtered" in locals() and df_filtered is not None) else df_visitas.copy()
 
-        # Métricas de contexto para el lector
-        visitas_unicas_ctx = (
-            int(df_unique[col_visita].nunique())
-            if ("df_unique" in locals() and df_unique is not None and col_visita in df_unique.columns)
-            else (int(df_bar_data[col_visita].nunique()) if col_visita in df_bar_data.columns else len(df_bar_data))
+    # Si existe columna de producto promocionado, filtramos filas con producto válido para enfocar en la promoción del producto
+    if "col_prod_visita" in locals() and col_prod_visita and col_prod_visita in _df_base_act_promo.columns:
+        _df_prod_ok = _df_base_act_promo[_df_base_act_promo[col_prod_visita].notna()].copy()
+        _df_prod_ok["_Prod_Str"] = _df_prod_ok[col_prod_visita].astype(str).str.strip()
+        _df_prod_ok = _df_prod_ok[~_df_prod_ok["_Prod_Str"].isin(["", "-", "nan", "none"])]
+        if len(_df_prod_ok) > 0:
+            _df_base_act_promo = _df_prod_ok
+
+    _df_base_act_promo["_Actitud"] = (
+        _df_base_act_promo[col_impacto]
+        .fillna("Sin sondeo")
+        .astype(str)
+        .str.strip()
+        .replace(["-", "", "nan", "none", "NaN", "NAN"], "Sin sondeo")
+    )
+
+    if "col_promo" in locals() and col_promo and col_promo in _df_base_act_promo.columns:
+        _df_base_act_promo["_Estado_Promo"] = _df_base_act_promo[col_promo].apply(
+            lambda v: "Entregado" if _es_promo_valido_act(v) else "No Entregado"
         )
-        impactos_totales_ctx = len(df_bar_data)
-        imp_por_visita_ctx = (impactos_totales_ctx / visitas_unicas_ctx) if visitas_unicas_ctx > 0 else 0.0
-        pct_sin_sondeo_ctx = (
-            (df_bar_data['Comentario_Clean'] == 'Sin sondeo').mean() * 100
-            if impactos_totales_ctx > 0
-            else 0.0
-        )
-
-        df_pivot = pd.crosstab(df_bar_data[col_prod_visita], df_bar_data['Comentario_Clean'], normalize='index') * 100
-        df_pivot = df_pivot.reset_index()
-
-        # Ordenar por impactos esperados
-        path_imp = uploaded_impactos if uploaded_impactos is not None else ('Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx' if os.path.exists('Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx') else None)
-
-        if path_imp is not None:
-            try:
-                if hasattr(path_imp, 'seek'):
-                    path_imp.seek(0)
-                df_imp_raw = pd.read_excel(path_imp, header=None)
-                esp_cols = [2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35, 38]
-                prod_esp = {}
-                for r in range(11, len(df_imp_raw)):
-                    prod = df_imp_raw.iloc[r, 1]
-                    if pd.isna(prod):
-                        continue
-                    prod = str(prod).strip()
-                    if prod in ['', '-']:
-                        continue
-                    esp_sum = sum(float(df_imp_raw.iloc[r, c]) for c in esp_cols if pd.notna(df_imp_raw.iloc[r, c]) and df_imp_raw.iloc[r, c] != '-')
-                    if esp_sum > 0:
-                        prod_esp[prod] = prod_esp.get(prod, 0) + esp_sum
-
-                sorted_prods = sorted(prod_esp.keys(), key=lambda x: prod_esp[x])
-                df_pivot['order'] = df_pivot[col_prod_visita].map(lambda x: sorted_prods.index(x) if x in sorted_prods else 999)
-                df_pivot = df_pivot.sort_values(by='order').drop(columns=['order'])
-            except Exception:
-                pass
-
-        fig_stack_100 = go.Figure()
-        for col_name in df_pivot.columns:
-            if col_name != col_prod_visita:
-                fig_stack_100.add_trace(go.Bar(
-                    y=df_pivot[col_prod_visita],
-                    x=df_pivot[col_name],
-                    name=col_name,
-                    orientation='h',
-                    text=df_pivot[col_name].round(1).astype(str) + '%',
-                    textposition='inside'
-                ))
-
-        fig_stack_100.update_layout(
-            barmode='stack',
-            template='plotly_dark',
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(0,0,0,0)',
-            height=500,
-            xaxis=dict(title="Porcentaje (%)", range=[0, 100]),
-            yaxis=dict(title="Producto", categoryorder='array', categoryarray=df_pivot[col_prod_visita].tolist()),
-            font=dict(color='white'),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-        )
-
-        col_graf_act_prod, col_ctx_act_prod = st.columns([2.4, 1], vertical_alignment="center")
-        with col_graf_act_prod:
-            st.plotly_chart(fig_stack_100, use_container_width=True, key="chart_3_actitud_producto_100")
-        with col_ctx_act_prod:
-            st.metric("Visitas Únicas", f"{visitas_unicas_ctx:,}")
-            st.markdown("<br>", unsafe_allow_html=True)
-            st.metric("Impactos Totales", f"{impactos_totales_ctx:,}")
-            st.markdown("<br>", unsafe_allow_html=True)
-            st.metric("Impactos / Visita", f"{imp_por_visita_ctx:.2f}", delta=f"{pct_sin_sondeo_ctx:.1f}% sin sondeo", delta_color="off")
     else:
-        st.info("No se encontró la columna de productos para generar la gráfica apilada.")
+        _df_base_act_promo["_Estado_Promo"] = "No Entregado"
+
+    # Métricas de contexto
+    _visitas_unicas_ctx = (
+        int(_df_base_act_promo[col_visita].nunique())
+        if ("col_visita" in locals() and col_visita and col_visita in _df_base_act_promo.columns)
+        else len(_df_base_act_promo)
+    )
+    _total_eval_ctx = len(_df_base_act_promo)
+    _pct_entregado_global = (
+        (_df_base_act_promo["_Estado_Promo"] == "Entregado").mean() * 100.0
+        if _total_eval_ctx > 0
+        else 0.0
+    )
+
+    _ct_act_promo = (
+        pd.crosstab(_df_base_act_promo["_Actitud"], _df_base_act_promo["_Estado_Promo"], normalize="index") * 100.0
+    )
+    for _est in ["Entregado", "No Entregado"]:
+        if _est not in _ct_act_promo.columns:
+            _ct_act_promo[_est] = 0.0
+
+    # Ordenar por % Entregado descendente (mayor arriba en barra horizontal)
+    _ct_act_promo = _ct_act_promo[["Entregado", "No Entregado"]].sort_values(
+        by="Entregado", ascending=False
+    ).reset_index()
+
+    _orden_actitudes = _ct_act_promo["_Actitud"].tolist()
+    _colores_promo_act = {
+        "Entregado": "#00CC96",
+        "No Entregado": "#FF2D8F",
+    }
+
+    fig_act_promo_100 = go.Figure()
+    for _est in ["Entregado", "No Entregado"]:
+        _vals = _ct_act_promo[_est].round(1)
+        _txts = [f"{v:.1f}%" if v >= 4.0 else "" for v in _vals]
+        fig_act_promo_100.add_trace(
+            go.Bar(
+                y=_ct_act_promo["_Actitud"],
+                x=_vals,
+                name=_est,
+                orientation="h",
+                marker=dict(color=_colores_promo_act[_est]),
+                text=_txts,
+                textposition="inside",
+                insidetextanchor="middle",
+                textfont=dict(color="white", size=12),
+            )
+        )
+
+    fig_act_promo_100.update_layout(
+        barmode="stack",
+        template="plotly_dark",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        height=max(380, len(_orden_actitudes) * 58),
+        xaxis=dict(title="Porcentaje (%)", range=[0, 100]),
+        yaxis=dict(
+            title="Actitud Detectada",
+            categoryorder="array",
+            categoryarray=_orden_actitudes[::-1],
+        ),
+        font=dict(color="white", size=12),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        margin=dict(t=55, b=45, l=210, r=30),
+    )
+
+    col_g_act_p, col_k_act_p = st.columns([2.4, 1], vertical_alignment="center")
+    with col_g_act_p:
+        st.plotly_chart(fig_act_promo_100, use_container_width=True, key="chart_actitud_entrega_promo_100")
+    with col_k_act_p:
+        st.metric("Visitas Únicas", f"{_visitas_unicas_ctx:,}")
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.metric("Promociones Evaluadas", f"{_total_eval_ctx:,}")
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.metric("% Global con Promocional", f"{_pct_entregado_global:.1f}%")
+else:
+    st.info("Carga los datos de visitas y asegúrate de contar con la columna de actitud/impacto.")
 # ------------------------------------------
 # 4.4. Compromisos (Espacio reservado para próxima fase)
 # ------------------------------------------
