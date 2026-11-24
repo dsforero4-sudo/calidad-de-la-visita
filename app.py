@@ -1396,146 +1396,97 @@ if df_visitas is not None:
         )
         st.plotly_chart(fig_mock_cat, use_container_width=True, key="chart_42_promo_categoria_mock")
 # ------------------------------------------
-    # 4.3. Barras Apiladas al 100% por Actitud del Médico
-    # ------------------------------------------
-    st.markdown("### 4.3. Correlación: Actitud Médica vs. Entrega Promocional")
-    st.markdown(
-        "<span style='color: #B7BCC9;'>Comparativa porcentual del uso de material promocional segmentada según la actitud registrada del médico.</span>",
-        unsafe_allow_html=True,
-    )
+    # --- GRÁFICA DE BARRAS HORIZONTALES APILADAS AL 100% + CAJONES DE CONTEXTO ---
+    st.markdown("### 📊 Distribución Porcentual de Actitud por Producto")
+    st.markdown("<span style='color: #B7BCC9;'>Comparativa 100% apilada ordenada por volumen de Impactos Esperados.</span>", unsafe_allow_html=True)
 
-    colores_43 = {
-        "Entregado": "#00CC96",
-        "No Entregado": "#FF2D8F",
-    }
+    if col_prod_visita and col_prod_visita in df_visitas.columns:
+        df_bar_data = df_visitas.copy()
+        df_bar_data[col_prod_visita] = df_bar_data[col_prod_visita].astype(str).str.strip()
+        df_bar_data = df_bar_data[~df_bar_data[col_prod_visita].isin(['', '-'])]
 
-    orden_importancia_actitudes = [
-        "Aceptación",
-        "Escepticismo",
-        "Evasivo",
-        "Indiferencia por no necesario",
-        "Indiferencia por satisfacción con el producto actual",
-        "Objeción por concepto falso",
-        "Sin sondeo",
-    ]
+        df_bar_data['Comentario_Clean'] = df_bar_data[col_impacto].fillna('Sin sondeo').astype(str).str.strip()
+        df_bar_data['Comentario_Clean'] = df_bar_data['Comentario_Clean'].replace(['-', '', 'nan', 'none', 'NaN', 'NAN'], 'Sin sondeo')
 
-    if col_impacto and col_impacto in df_visitas.columns:
-        df_act_data = df_visitas.copy()
-        df_act_data["Actitud_Clean"] = df_act_data[col_impacto].fillna("Sin sondeo").astype(str).str.strip()
-        df_act_data["Actitud_Clean"] = df_act_data["Actitud_Clean"].replace(
-            ["-", "", "nan", "none", "NaN", "NAN"], "Sin sondeo"
+        # Métricas de contexto para el lector
+        visitas_unicas_ctx = (
+            int(df_unique[col_visita].nunique())
+            if ("df_unique" in locals() and df_unique is not None and col_visita in df_unique.columns)
+            else (int(df_bar_data[col_visita].nunique()) if col_visita in df_bar_data.columns else len(df_bar_data))
+        )
+        impactos_totales_ctx = len(df_bar_data)
+        imp_por_visita_ctx = (impactos_totales_ctx / visitas_unicas_ctx) if visitas_unicas_ctx > 0 else 0.0
+        pct_sin_sondeo_ctx = (
+            (df_bar_data['Comentario_Clean'] == 'Sin sondeo').mean() * 100
+            if impactos_totales_ctx > 0
+            else 0.0
         )
 
-        if col_promo and col_promo in df_act_data.columns:
-            df_act_data["Promo_Status"] = df_act_data[col_promo].apply(
-                lambda x: "Entregado"
-                if pd.notna(x) and str(x).strip().lower() not in ["", "-", "0", "nan", "none", "no", "sin material"]
-                else "No Entregado"
-            )
-        else:
-            df_act_data["Promo_Status"] = "No Entregado"
+        df_pivot = pd.crosstab(df_bar_data[col_prod_visita], df_bar_data['Comentario_Clean'], normalize='index') * 100
+        df_pivot = df_pivot.reset_index()
 
-        df_act_pivot = (
-            pd.crosstab(df_act_data["Actitud_Clean"], df_act_data["Promo_Status"], normalize="index") * 100
-        )
-        for estado_p in ["Entregado", "No Entregado"]:
-            if estado_p not in df_act_pivot.columns:
-                df_act_pivot[estado_p] = 0.0
-        df_act_pivot = df_act_pivot[["Entregado", "No Entregado"]].reset_index()
+        # Ordenar por impactos esperados
+        path_imp = uploaded_impactos if uploaded_impactos is not None else ('Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx' if os.path.exists('Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx') else None)
 
-        actitudes_presentes = df_act_pivot["Actitud_Clean"].tolist()
-        orden_final_act = [a for a in orden_importancia_actitudes if a in actitudes_presentes] + [
-            a for a in actitudes_presentes if a not in orden_importancia_actitudes
-        ]
+        if path_imp is not None:
+            try:
+                if hasattr(path_imp, 'seek'):
+                    path_imp.seek(0)
+                df_imp_raw = pd.read_excel(path_imp, header=None)
+                esp_cols = [2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35, 38]
+                prod_esp = {}
+                for r in range(11, len(df_imp_raw)):
+                    prod = df_imp_raw.iloc[r, 1]
+                    if pd.isna(prod):
+                        continue
+                    prod = str(prod).strip()
+                    if prod in ['', '-']:
+                        continue
+                    esp_sum = sum(float(df_imp_raw.iloc[r, c]) for c in esp_cols if pd.notna(df_imp_raw.iloc[r, c]) and df_imp_raw.iloc[r, c] != '-')
+                    if esp_sum > 0:
+                        prod_esp[prod] = prod_esp.get(prod, 0) + esp_sum
 
-        fig_bar_act = go.Figure()
-        for estado_p in ["Entregado", "No Entregado"]:
-            vals = df_act_pivot[estado_p].round(1)
-            txts = [f"{v:.1f}%" if v >= 4.0 else "" for v in vals]
-            fig_bar_act.add_trace(
-                go.Bar(
-                    y=df_act_pivot["Actitud_Clean"],
-                    x=vals,
-                    name=estado_p,
-                    orientation="h",
-                    marker=dict(color=colores_43[estado_p]),
-                    text=txts,
-                    textposition="inside",
-                    insidetextanchor="middle",
-                    textfont=dict(color="white", size=11),
-                )
-            )
+                sorted_prods = sorted(prod_esp.keys(), key=lambda x: prod_esp[x])
+                df_pivot['order'] = df_pivot[col_prod_visita].map(lambda x: sorted_prods.index(x) if x in sorted_prods else 999)
+                df_pivot = df_pivot.sort_values(by='order').drop(columns=['order'])
+            except Exception:
+                pass
 
-        fig_bar_act.update_layout(
-            barmode="stack",
-            template="plotly_dark",
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            height=420,
+        fig_stack_100 = go.Figure()
+        for col_name in df_pivot.columns:
+            if col_name != col_prod_visita:
+                fig_stack_100.add_trace(go.Bar(
+                    y=df_pivot[col_prod_visita],
+                    x=df_pivot[col_name],
+                    name=col_name,
+                    orientation='h',
+                    text=df_pivot[col_name].round(1).astype(str) + '%',
+                    textposition='inside'
+                ))
+
+        fig_stack_100.update_layout(
+            barmode='stack',
+            template='plotly_dark',
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            height=500,
             xaxis=dict(title="Porcentaje (%)", range=[0, 100]),
-            yaxis=dict(
-                title="Actitud del Médico",
-                categoryorder="array",
-                categoryarray=orden_final_act[::-1],
-            ),
-            font=dict(color="white"),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            yaxis=dict(title="Producto", categoryorder='array', categoryarray=df_pivot[col_prod_visita].tolist()),
+            font=dict(color='white'),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
         )
-        st.plotly_chart(fig_bar_act, use_container_width=True, key="chart_43_actitud_promo")
+
+        col_graf_act_prod, col_ctx_act_prod = st.columns([2.4, 1], vertical_alignment="center")
+        with col_graf_act_prod:
+            st.plotly_chart(fig_stack_100, use_container_width=True, key="chart_3_actitud_producto_100")
+        with col_ctx_act_prod:
+            st.metric("Visitas Únicas", f"{visitas_unicas_ctx:,}")
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.metric("Impactos Totales", f"{impactos_totales_ctx:,}")
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.metric("Impactos / Visita", f"{imp_por_visita_ctx:.2f}", delta=f"{pct_sin_sondeo_ctx:.1f}% sin sondeo", delta_color="off")
     else:
-        mock_act_df = pd.DataFrame(
-            {
-                "Actitud": orden_importancia_actitudes,
-                "Entregado": [88.5, 72.0, 55.4, 45.0, 40.1, 35.0, 30.2],
-            }
-        )
-        mock_act_df["No Entregado"] = 100 - mock_act_df["Entregado"]
-
-        fig_mock_act = go.Figure()
-        for estado_p in ["Entregado", "No Entregado"]:
-            vals = mock_act_df[estado_p].round(1)
-            txts = [f"{v:.1f}%" if v >= 4.0 else "" for v in vals]
-            fig_mock_act.add_trace(
-                go.Bar(
-                    y=mock_act_df["Actitud"],
-                    x=vals,
-                    name=estado_p,
-                    orientation="h",
-                    marker=dict(color=colores_43[estado_p]),
-                    text=txts,
-                    textposition="inside",
-                    insidetextanchor="middle",
-                    textfont=dict(color="white", size=11),
-                )
-            )
-
-        fig_mock_act.update_layout(
-            barmode="stack",
-            template="plotly_dark",
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            height=420,
-            xaxis=dict(title="Porcentaje (%)", range=[0, 100]),
-            yaxis=dict(
-                title="Actitud del Médico",
-                categoryorder="array",
-                categoryarray=orden_importancia_actitudes[::-1],
-            ),
-            font=dict(color="white"),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-            title="<b>Actitud vs. Entrega de Elementos Promocionales (Simulado Gerencial)</b>",
-        )
-        st.plotly_chart(fig_mock_act, use_container_width=True, key="chart_43_actitud_promo_mock")
-
-else:
-    st.info("👈 Por favor carga el **Listado de Visitas** en la barra lateral para habilitar los indicadores de la Sección 4.")
-
-if st.button("🖨️ Preparar Vista para Imprimir / Guardar PDF"):
-    st.balloons()
-    st.info("Presiona las teclas **Ctrl + P** (o **Cmd + P** en Mac) en tu teclado y selecciona la opción **'Guardar como PDF'** en el destino de impresión.")
-
-st.markdown("---")
-
+        st.info("No se encontró la columna de productos para generar la gráfica apilada.")
 # ------------------------------------------
 # 4.4. Compromisos (Espacio reservado para próxima fase)
 # ------------------------------------------
