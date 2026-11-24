@@ -881,9 +881,10 @@ col_impacto = buscar_columna(df_visitas, ['Comentario de Impacto', 'Comentario i
 col_prod_visita = buscar_columna(df_visitas, ['Impactos', 'Producto', 'Producto promocionado', 'Marca'])
 
 if col_impacto and col_impacto in df_visitas.columns:
-    
+
     # --- CONTRASTE DE DOS TORTAS LADO A LADO ---
     col_t1, col_t2 = st.columns(2)
+
     # Torta 1: Actitud del Médico
     with col_t1:
         df_actitud_eval = df_visitas.drop_duplicates(subset=[col_visita]).copy() if col_visita in df_visitas.columns else df_visitas.copy()
@@ -927,21 +928,31 @@ if col_impacto and col_impacto in df_visitas.columns:
         )
         fig_pie_actitud.update_traces(
             sort=False,
-            domain=dict(x=[0.16, 0.84], y=[0.14, 0.86]),
+            domain=dict(x=[0.0, 0.68], y=[0.08, 0.92]),
             textposition='inside',
-            textinfo='percent+label',
+            textinfo='percent',
+            insidetextorientation='horizontal',
             direction='clockwise',
             rotation=90,
-            textfont=dict(color='white', size=14),
+            textfont=dict(color='white', size=13),
             pull=[0.02] * len(df_act_counts),
+            hovertemplate="<b>%{label}</b><br>Visitas: %{value:,}<br>Porcentaje: %{percent}<extra></extra>",
         )
         fig_pie_actitud.update_layout(
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)',
-            height=440,
-            font=dict(color='white'),
-            showlegend=False,
-            margin=dict(t=55, b=35, l=20, r=20),
+            height=450,
+            font=dict(color='white', size=12),
+            showlegend=True,
+            legend=dict(
+                orientation="v",
+                yanchor="middle",
+                y=0.5,
+                xanchor="left",
+                x=0.72,
+                font=dict(color='white', size=12),
+            ),
+            margin=dict(t=55, b=30, l=15, r=20),
         )
         st.plotly_chart(fig_pie_actitud, use_container_width=True, key="chart_dona_actitud_medico")
 
@@ -971,14 +982,13 @@ if col_impacto and col_impacto in df_visitas.columns:
             if col_adop is not None:
                 df_panel_clean = df_panel_loaded.iloc[1:].copy()
 
-                # Función de limpieza y unificación de categorías solicitadas
                 def limpiar_adopcion(val):
                     v = str(val).strip().lower()
                     if v in ['top', 'alto']:
                         return 'Alto'
                     elif v in ['medio']:
                         return 'Medio'
-                    else:  # 'sin nivel', 'bajo', nan, etc. pasan a ser 'Bajo'
+                    else:
                         return 'Bajo'
 
                 df_panel_clean['Adopcion_Clean'] = df_panel_clean[col_adop].apply(limpiar_adopcion)
@@ -986,7 +996,6 @@ if col_impacto and col_impacto in df_visitas.columns:
                 df_adop_counts = df_panel_clean['Adopcion_Clean'].value_counts().reset_index()
                 df_adop_counts.columns = ['Nivel_Adopcion', 'Total']
 
-                # Definimos el orden estricto en el sentido de las manecillas del reloj: Alto, Medio, Bajo
                 orden_categorias = ['Alto', 'Medio', 'Bajo']
                 df_adop_counts['Nivel_Adopcion'] = pd.Categorical(df_adop_counts['Nivel_Adopcion'], categories=orden_categorias, ordered=True)
                 df_adop_counts = df_adop_counts.sort_values('Nivel_Adopcion').reset_index(drop=True)
@@ -1010,28 +1019,37 @@ if col_impacto and col_impacto in df_visitas.columns:
                 )
                 fig_pie_adop.update_traces(
                     sort=False,
-                    domain=dict(x=[0.16, 0.84], y=[0.14, 0.86]),
+                    domain=dict(x=[0.0, 0.68], y=[0.08, 0.92]),
                     textposition='inside',
-                    textinfo='percent+label',
+                    textinfo='percent',
+                    insidetextorientation='horizontal',
                     direction='clockwise',
                     rotation=90,
-                    textfont=dict(color='white', size=11),
+                    textfont=dict(color='white', size=13),
                     pull=[0.02] * len(df_adop_counts),
+                    hovertemplate="<b>%{label}</b><br>Contactos: %{value:,}<br>Porcentaje: %{percent}<extra></extra>",
                 )
                 fig_pie_adop.update_layout(
                     paper_bgcolor='rgba(0,0,0,0)',
                     plot_bgcolor='rgba(0,0,0,0)',
-                    height=440,
-                    font=dict(color='white'),
-                    showlegend=False,
-                    margin=dict(t=55, b=35, l=20, r=20),
+                    height=450,
+                    font=dict(color='white', size=12),
+                    showlegend=True,
+                    legend=dict(
+                        orientation="v",
+                        yanchor="middle",
+                        y=0.5,
+                        xanchor="left",
+                        x=0.72,
+                        font=dict(color='white', size=12),
+                    ),
+                    margin=dict(t=55, b=30, l=15, r=20),
                 )
                 st.plotly_chart(fig_pie_adop, use_container_width=True, key="chart_dona_nivel_adopcion")
             else:
                 st.info("💡 No se encontró la columna de Nivel de Adopción en el archivo cargado.")
         else:
-            st.info("💡 Por favor cargue el archivo de Consulta Detallada de Contactos en la barra lateral.")    
-
+            st.info("💡 Por favor cargue el archivo de Consulta Detallada de Contactos en la barra lateral.")
     # --- GRÁFICA DE BARRAS HORIZONTALES APILADAS AL 100% (ORDENADAS POR ESPERADOS) ---
     st.markdown("### 📊 Distribución Porcentual de Actitud por Producto")
     st.markdown("<span style='color: #B7BCC9;'>Comparativa 100% apilada ordenada por volumen de Impactos Esperados.</span>", unsafe_allow_html=True)
