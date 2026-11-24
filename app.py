@@ -351,7 +351,7 @@ df_smart_counts.columns = ['Smart_Nivel', 'Total']
 color_map_smart = {
     '5 Puntos: Excelente (SMART)': '#2ECC71', 
     '3-4 Puntos: Aceptable': '#3DD6FF', 
-    '0-2 Puntos: Bajo / No Definido': '#FF2D8F',
+    '0-2 Puntos: Bajo': '#FF2D8F',
     'No Definido / Vacío': '#B7BCC9'
 }
 
