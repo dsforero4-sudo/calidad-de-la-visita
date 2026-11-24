@@ -1054,11 +1054,15 @@ if col_impacto and col_impacto in df_visitas.columns:
 st.markdown("### 📊 Distribución Porcentual de Actitud por Producto")
     st.markdown("<span style='color: #B7BCC9;'>Comparativa 100% apilada ordenada por volumen de Impactos Esperados.</span>", unsafe_allow_html=True)
 
+if col_impacto and col_impacto in df_visitas.columns:
+    st.markdown("### 📊 Distribución Porcentual de Actitud por Producto")
+    st.markdown("<span style='color: #B7BCC9;'>Comparativa 100% apilada ordenada por volumen de Impactos Esperados.</span>", unsafe_allow_html=True)
+
     if col_prod_visita and col_prod_visita in df_visitas.columns:
         df_bar_data = df_visitas.copy()
         df_bar_data[col_prod_visita] = df_bar_data[col_prod_visita].astype(str).str.strip()
         df_bar_data = df_bar_data[~df_bar_data[col_prod_visita].isin(['', '-'])]
-        
+
         df_bar_data['Comentario_Clean'] = df_bar_data[col_impacto].fillna('Sin sondeo').astype(str).str.strip()
         df_bar_data['Comentario_Clean'] = df_bar_data['Comentario_Clean'].replace(['-', '', 'nan', 'none', 'NaN', 'NAN'], 'Sin sondeo')
 
@@ -1067,21 +1071,25 @@ st.markdown("### 📊 Distribución Porcentual de Actitud por Producto")
 
         # Ordenar por impactos esperados
         path_imp = uploaded_impactos if uploaded_impactos is not None else ('Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx' if os.path.exists('Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx') else None)
-        
+
         if path_imp is not None:
             try:
-                if hasattr(path_imp, 'seek'): path_imp.seek(0)
+                if hasattr(path_imp, 'seek'):
+                    path_imp.seek(0)
                 df_imp_raw = pd.read_excel(path_imp, header=None)
                 esp_cols = [2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35, 38]
                 prod_esp = {}
                 for r in range(11, len(df_imp_raw)):
                     prod = df_imp_raw.iloc[r, 1]
-                    if pd.isna(prod): continue
+                    if pd.isna(prod):
+                        continue
                     prod = str(prod).strip()
-                    if prod in ['', '-']: continue
+                    if prod in ['', '-']:
+                        continue
                     esp_sum = sum(float(df_imp_raw.iloc[r, c]) for c in esp_cols if pd.notna(df_imp_raw.iloc[r, c]) and df_imp_raw.iloc[r, c] != '-')
-                    if esp_sum > 0: prod_esp[prod] = prod_esp.get(prod, 0) + esp_sum
-                
+                    if esp_sum > 0:
+                        prod_esp[prod] = prod_esp.get(prod, 0) + esp_sum
+
                 sorted_prods = sorted(prod_esp.keys(), key=lambda x: prod_esp[x])
                 df_pivot['order'] = df_pivot[col_prod_visita].map(lambda x: sorted_prods.index(x) if x in sorted_prods else 999)
                 df_pivot = df_pivot.sort_values(by='order').drop(columns=['order'])
