@@ -1582,14 +1582,265 @@ if df_visitas is not None and len(df_visitas) > 0 and "col_impacto" in locals() 
         st.metric("% Global con Promocional", f"{_pct_entregado_global:.1f}%")
 else:
     st.info("Carga los datos de visitas y asegúrate de contar con la columna de actitud/impacto.")
-# ------------------------------------------
-# 4.4. Compromisos (Espacio reservado para próxima fase)
-# ------------------------------------------
-st.markdown("### 4.4. Compromisos")
-st.markdown("<span style='color: #B7BCC9;'>Acuerdos, compromisos de prescripción o seguimiento médico y planes de acción acordados en la visita.</span>", unsafe_allow_html=True)
-st.info("📌 **Apartado en preparación:** Aún no contamos con la fuente/columna de compromisos mapeada para este ciclo. Queda reservado este bloque para integrar el indicador en la siguiente iteración.")
+# ==========================================
+    # 4.2.1. Visitas con compromiso (Torta Global + Barras por Representante)
+    # ==========================================
+    st.markdown("### 4.2.1 Visitas con compromiso")
+    st.markdown(
+        "<span style='color: #B7BCC9;'>Proporción de visitas únicas con al menos un compromiso asignado frente a visitas sin compromiso, y desglose porcentual por representante.</span>",
+        unsafe_allow_html=True,
+    )
 
-st.markdown("---")
+    col_comp = buscar_columna(df_visitas, ["Compromiso", "Compromisos", "Tiene compromiso"])
+    col_tipo_comp = buscar_columna(df_visitas, ["Tipo de compromiso", "Tipo compromiso", "Tipo de Compromiso"])
+    col_id_vis_comp = buscar_columna(
+        df_visitas,
+        ["Cod. visita", "Código visita", "Cod visita", "Id visita", "ID Visita", "Visita única", "Visita"],
+    )
+    col_rep_comp = buscar_columna(df_visitas, ["Representante", "Asesor", "Visitador"])
+
+    _df_base_comp = df_filtered if "df_filtered" in locals() and df_filtered is not None else df_visitas
+
+    if col_comp and col_comp in _df_base_comp.columns:
+        def _tiene_compromiso_val(val):
+            if pd.isna(val):
+                return False
+            s = str(val).strip().lower()
+            return s not in ["", "-", "0", "no", "sin compromiso", "nan", "none", "null"]
+
+        _df_c_work = _df_base_comp.copy()
+        _df_c_work["_Comp_Bool"] = _df_c_work[col_comp].apply(_tiene_compromiso_val)
+
+        if col_id_vis_comp and col_id_vis_comp in _df_c_work.columns:
+            ids_con_comp = set(_df_c_work.loc[_df_c_work["_Comp_Bool"], col_id_vis_comp].dropna())
+            if "df_unique" in locals() and df_unique is not None and len(df_unique) > 0 and col_id_vis_comp in df_unique.columns:
+                _df_c_uniq = df_unique.copy()
+                _df_c_uniq["_Comp_Bool"] = _df_c_uniq[col_id_vis_comp].isin(ids_con_comp)
+            else:
+                _df_c_uniq = _df_c_work.drop_duplicates(subset=[col_id_vis_comp]).copy()
+                _df_c_uniq["_Comp_Bool"] = _df_c_uniq[col_id_vis_comp].isin(ids_con_comp)
+        else:
+            _df_c_uniq = _df_c_work.copy()
+
+        _df_c_uniq["Estado_Compromiso"] = _df_c_uniq["_Comp_Bool"].apply(
+            lambda ok: "Con Compromiso" if ok else "Sin Compromiso"
+        )
+
+        orden_comp = ["Con Compromiso", "Sin Compromiso"]
+        colores_comp = {
+            "Con Compromiso": "#00CC96",
+            "Sin Compromiso": "#FF2D8F",
+        }
+
+        df_comp_counts = (
+            _df_c_uniq["Estado_Compromiso"]
+            .value_counts()
+            .reindex(orden_comp, fill_value=0)
+            .reset_index()
+        )
+        df_comp_counts.columns = ["Estado_Compromiso", "Total"]
+
+        fig_comp_pie = px.pie(
+            df_comp_counts,
+            names="Estado_Compromiso",
+            values="Total",
+            hole=0.42,
+            template="plotly_dark",
+            title="<b>4.2.1 Visitas con compromiso</b>",
+            color="Estado_Compromiso",
+            color_discrete_map=colores_comp,
+            category_orders={"Estado_Compromiso": orden_comp},
+        )
+        fig_comp_pie.update_traces(
+            sort=False,
+            domain=dict(x=[0.0, 0.68], y=[0.08, 0.92]),
+            textposition="inside",
+            textinfo="percent",
+            insidetextorientation="horizontal",
+            direction="clockwise",
+            rotation=90,
+            textfont=dict(color="white", size=14),
+            pull=[0.02] * len(df_comp_counts),
+            hovertemplate="<b>%{label}</b><br>Visitas únicas: %{value:,}<br>Porcentaje: %{percent}<extra></extra>",
+        )
+        fig_comp_pie.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            height=430,
+            font=dict(color="white", size=12),
+            showlegend=True,
+            legend=dict(
+                orientation="v",
+                yanchor="middle",
+                y=0.5,
+                xanchor="left",
+                x=0.72,
+                font=dict(color="white", size=12),
+            ),
+            margin=dict(t=55, b=35, l=15, r=20),
+        )
+        st.plotly_chart(fig_comp_pie, use_container_width=True, key="chart_421_visitas_compromiso_pie")
+
+        # --- Barras 100% apiladas por Representante ---
+        if col_rep_comp and col_rep_comp in _df_c_uniq.columns:
+            _df_rep_c = _df_c_uniq[_df_c_uniq[col_rep_comp].notna()].copy()
+            _df_rep_c["_Rep_Clean"] = _df_rep_c[col_rep_comp].astype(str).str.strip()
+            _df_rep_c = _df_rep_c[_df_rep_c["_Rep_Clean"] != ""]
+
+            df_rep_comp_grp = (
+                _df_rep_c.groupby("_Rep_Clean", as_index=False)["_Comp_Bool"]
+                .agg(Visitas_Totales="count", Con_Compromiso="sum")
+            )
+            df_rep_comp_grp["Sin_Compromiso"] = df_rep_comp_grp["Visitas_Totales"] - df_rep_comp_grp["Con_Compromiso"]
+            df_rep_comp_grp["Pct_Con_Comp"] = (
+                df_rep_comp_grp["Con_Compromiso"] / df_rep_comp_grp["Visitas_Totales"] * 100.0
+            ).round(1)
+            df_rep_comp_grp["Pct_Sin_Comp"] = (100.0 - df_rep_comp_grp["Pct_Con_Comp"]).round(1)
+
+            df_rep_comp_grp = df_rep_comp_grp.sort_values(
+                by=["Pct_Con_Comp", "Con_Compromiso", "_Rep_Clean"],
+                ascending=[False, False, True],
+            ).reset_index(drop=True)
+
+            orden_reps_comp = df_rep_comp_grp["_Rep_Clean"].tolist()
+
+            fig_rep_comp = go.Figure()
+            for estado_lbl, col_pct, col_cnt, color_hex in [
+                ("Con Compromiso", "Pct_Con_Comp", "Con_Compromiso", "#00CC96"),
+                ("Sin Compromiso", "Pct_Sin_Comp", "Sin_Compromiso", "#FF2D8F"),
+            ]:
+                vals_pct = df_rep_comp_grp[col_pct]
+                fig_rep_comp.add_trace(
+                    go.Bar(
+                        y=df_rep_comp_grp["_Rep_Clean"],
+                        x=vals_pct,
+                        name=estado_lbl,
+                        orientation="h",
+                        marker=dict(color=color_hex),
+                        text=[f"{v:.1f}%" if v >= 5.0 else "" for v in vals_pct],
+                        textposition="inside",
+                        insidetextanchor="middle",
+                        textfont=dict(color="white", size=12),
+                        customdata=df_rep_comp_grp[[col_cnt, "Visitas_Totales"]].values,
+                        hovertemplate=(
+                            "<b>%{y}</b><br>"
+                            + estado_lbl
+                            + ": %{customdata[0]:,} de %{customdata[1]:,} visitas (%{x:.1f}%)<extra></extra>"
+                        ),
+                    )
+                )
+
+            fig_rep_comp.update_layout(
+                barmode="stack",
+                template="plotly_dark",
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                height=max(420, len(orden_reps_comp) * 28),
+                xaxis=dict(title="Porcentaje de Visitas por Representante (%)", range=[0, 100]),
+                yaxis=dict(
+                    title="Representante",
+                    categoryorder="array",
+                    categoryarray=orden_reps_comp[::-1],
+                ),
+                font=dict(color="white", size=12),
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                margin=dict(t=60, b=45, l=220, r=30),
+                title="<b>Porcentaje de Visitas con vs. sin Compromiso por Representante</b>",
+            )
+            st.plotly_chart(fig_rep_comp, use_container_width=True, key="chart_421_compromiso_por_representante")
+    else:
+        st.info("💡 No se encontró la columna 'Compromiso' en el archivo de visitas.")
+
+    # ==========================================
+    # 4.2.2. Distribución de tipos de compromiso
+    # ==========================================
+    st.markdown("### 4.2.2 Distribución de tipos de compromiso")
+    st.markdown(
+        "<span style='color: #B7BCC9;'>Distribución general de los tipos de compromiso asignados en las visitas.</span>",
+        unsafe_allow_html=True,
+    )
+
+    if col_tipo_comp and col_tipo_comp in _df_base_comp.columns:
+        _df_t_work = _df_base_comp.copy()
+        if col_comp and col_comp in _df_t_work.columns:
+            _df_t_work = _df_t_work[_df_t_work[col_comp].apply(_tiene_compromiso_val)].copy()
+
+        _df_t_work["_Tipo_Comp_Clean"] = (
+            _df_t_work[col_tipo_comp]
+            .fillna("")
+            .astype(str)
+            .str.strip()
+        )
+        _df_t_work = _df_t_work[
+            ~_df_t_work["_Tipo_Comp_Clean"].str.lower().isin(["", "-", "nan", "none", "null", "sin compromiso"])
+        ].copy()
+
+        if col_id_vis_comp and col_id_vis_comp in _df_t_work.columns:
+            _df_t_eval = _df_t_work.sort_values([col_id_vis_comp, "_Tipo_Comp_Clean"]).drop_duplicates(
+                subset=[col_id_vis_comp]
+            )
+        else:
+            _df_t_eval = _df_t_work
+
+        if len(_df_t_eval) > 0:
+            df_tipo_counts = (
+                _df_t_eval["_Tipo_Comp_Clean"]
+                .value_counts()
+                .reset_index()
+            )
+            df_tipo_counts.columns = ["Tipo_Compromiso", "Total"]
+
+            paleta_tipo_comp = ["#00CC96", "#FF2D8F", "#F39C12", "#7A2CFF", "#00B8D9", "#FF6B6B"]
+            tipos_unicos = df_tipo_counts["Tipo_Compromiso"].tolist()
+            mapa_colores_tipo = {
+                t: paleta_tipo_comp[i % len(paleta_tipo_comp)]
+                for i, t in enumerate(tipos_unicos)
+            }
+
+            fig_tipo_pie = px.pie(
+                df_tipo_counts,
+                names="Tipo_Compromiso",
+                values="Total",
+                hole=0.42,
+                template="plotly_dark",
+                title="<b>4.2.2 Distribución de tipos de compromiso</b>",
+                color="Tipo_Compromiso",
+                color_discrete_map=mapa_colores_tipo,
+                category_orders={"Tipo_Compromiso": tipos_unicos},
+            )
+            fig_tipo_pie.update_traces(
+                sort=False,
+                domain=dict(x=[0.0, 0.65], y=[0.08, 0.92]),
+                textposition="inside",
+                textinfo="percent",
+                insidetextorientation="horizontal",
+                direction="clockwise",
+                rotation=90,
+                textfont=dict(color="white", size=14),
+                pull=[0.02] * len(df_tipo_counts),
+                hovertemplate="<b>%{label}</b><br>Visitas: %{value:,}<br>Porcentaje: %{percent}<extra></extra>",
+            )
+            fig_tipo_pie.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                height=440,
+                font=dict(color="white", size=12),
+                showlegend=True,
+                legend=dict(
+                    orientation="v",
+                    yanchor="middle",
+                    y=0.5,
+                    xanchor="left",
+                    x=0.68,
+                    font=dict(color="white", size=12),
+                ),
+                margin=dict(t=55, b=35, l=15, r=20),
+            )
+            st.plotly_chart(fig_tipo_pie, use_container_width=True, key="chart_422_tipos_compromiso_pie")
+        else:
+            st.info("💡 No hay registros con Tipo de compromiso válido para mostrar.")
+    else:
+        st.info("💡 No se encontró la columna 'Tipo de compromiso' en el archivo de visitas.")
 
 # ------------------------------------------
 # 4.5. Auditoria de Calidad Metodologica
