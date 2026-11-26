@@ -1961,6 +1961,7 @@ if "df_visitas" in locals() and df_visitas is not None and len(df_visitas) > 0:
                 margin=dict(t=60, b=45, l=220, r=30),
                 title="<b>Porcentaje de Visitas con vs. sin Compromiso por Representante</b>",
             )
+            fig_rep_comp = apply_chart_style(fig_rep_comp, "comp_421_rep", show_legend=True)
             st.plotly_chart(fig_rep_comp, use_container_width=True, key="chart_421_compromiso_por_representante")
     else:
         st.info("💡 No se encontró la columna 'Compromiso' en el archivo de visitas.")
