@@ -71,15 +71,6 @@ DEFAULT_CHART_CONFIG = {
         "height": 440,
         "visible": True,
     },
-    "objetivos_copypaste": {
-        "label": "1.1 Objetivos - Índice de Copy-Paste",
-        "title": "1.1. Objetivos, índice de Copy-Paste",
-        "label_size": 13,
-        "label_color": "#FFFFFF",
-        "legend_size": 12,
-        "height": 480,
-        "visible": True,
-    },
 }
 
 
