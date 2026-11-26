@@ -769,372 +769,358 @@ st.plotly_chart(fig_bar_copia, use_container_width=True, key="chart_11_copypaste
 # ==========================================
 # SECCIÓN 2: PRESENTACIÓN DE BENEFICIOS (IMPACTOS Y AYUDAS VISUALES)
 # ==========================================
-def render_bloque_2_beneficios():
-    st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
-    st.subheader("2. Presentación de Beneficios (Impactos y Ayudas Visuales)")
-    st.markdown("<span style='color: #B7BCC9;'>Análisis de la argumentación clínica, cumplimiento de impactos promocionales y ayudas visuales por visita.</span>", unsafe_allow_html=True)
-    st.markdown("---")
+st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
+st.subheader("2. Presentación de Beneficios (Impactos y Ayudas Visuales)")
+st.markdown("<span style='color: #B7BCC9;'>Análisis de la argumentación clínica, cumplimiento de impactos promocionales y ayudas visuales por visita.</span>", unsafe_allow_html=True)
+st.markdown("---")
 
-    def _resolver_archivo_av():
-        if "uploaded_av" in locals() and uploaded_av is not None:
-            return uploaded_av
-        if os.path.exists("Ayudas_visuales.xlsx"):
-            return "Ayudas_visuales.xlsx"
-        candidatos = [
-            f for f in os.listdir(".")
-            if f.lower().endswith(".xlsx") and ("ayuda" in f.lower() or "visual" in f.lower())
-        ]
-        return candidatos[0] if candidatos else None
+# Procesamiento de datos para los 4 indicadores claves
+total_visitas_calc = int(df_unique[col_visita].nunique()) if col_visita and col_visita in df_unique.columns else len(df_unique)
 
-    # Procesamiento de datos para los 4 indicadores claves
-    total_visitas_calc = int(df_unique[col_visita].nunique()) if col_visita and col_visita in df_unique.columns else len(df_unique)
+total_impactos_calc = 28392
+if uploaded_impactos is not None and df_impactos is not None and 'Imp_Real' in df_impactos.columns:
+    total_impactos_calc = int(df_impactos['Imp_Real'].sum())
 
-    total_impactos_calc = 28392
-    if uploaded_impactos is not None and df_impactos is not None and 'Imp_Real' in df_impactos.columns:
-        total_impactos_calc = int(df_impactos['Imp_Real'].sum())
+total_av_calc = 64
+if uploaded_av is not None:
+    try:
+        uploaded_av.seek(0)
+        df_av_temp = pd.read_excel(uploaded_av, skiprows=2, header=None)
+        if df_av_temp.shape[1] > 15:
+            total_av_calc = int(pd.to_numeric(df_av_temp[15], errors='coerce').sum())
+    except:
+        pass
+elif os.path.exists('Ayudas_visuales.xlsx'):
+    try:
+        df_av_temp = pd.read_excel('Ayudas_visuales.xlsx', skiprows=2, header=None)
+        if df_av_temp.shape[1] > 15:
+            total_av_calc = int(pd.to_numeric(df_av_temp[15], errors='coerce').sum())
+    except:
+        pass
 
-    total_av_calc = 64
-    av_source_kpi = _resolver_archivo_av()
-    if av_source_kpi is not None:
+impactos_promedio = round(total_impactos_calc / total_visitas_calc, 2) if total_visitas_calc > 0 else 0.0
+av_promedio = round(total_av_calc / total_visitas_calc, 2) if total_visitas_calc > 0 else 0.0
+
+# Renderizado de los 4 cajones clave
+col_b1, col_b2, col_b3, col_b4 = st.columns(4)
+with col_b1:
+    st.metric("Visitas Totales", f"{total_visitas_calc:,}")
+with col_b2:
+    st.metric("Impactos Totales", f"{total_impactos_calc:,}")
+with col_b3:
+    st.metric("Impactos Promedio / Visita", f"{impactos_promedio:,.2f}")
+with col_b4:
+    st.metric("Ayudas Visuales Promedio / Visita", f"{av_promedio:,.2f}")
+
+st.markdown("---")
+
+# ==========================================
+# GRÁFICOS DE TORTA LADO A LADO
+# ==========================================
+st.markdown("### Distribución Porcentual: Impactos vs Ayudas Visuales")
+st.markdown("<span style='color: #B7BCC9;'>Comparativa de participación por productos y líneas de soporte.</span>", unsafe_allow_html=True)
+st.markdown("---")
+
+col_t1, col_t2 = st.columns(2)
+
+# --- COLUMNA 1: Torta de Impactos Promocionales ---
+with col_t1:
+    if uploaded_impactos is not None or os.path.exists("Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx"):
         try:
-            if hasattr(av_source_kpi, "seek"):
-                av_source_kpi.seek(0)
-            df_av_temp = pd.read_excel(av_source_kpi, skiprows=2, header=None)
-            if df_av_temp.shape[1] > 15:
-                total_av_calc = int(pd.to_numeric(df_av_temp[15], errors='coerce').sum())
-        except Exception:
-            pass
-
-    impactos_promedio = round(total_impactos_calc / total_visitas_calc, 2) if total_visitas_calc > 0 else 0.0
-    av_promedio = round(total_av_calc / total_visitas_calc, 2) if total_visitas_calc > 0 else 0.0
-
-    # Renderizado de los 4 cajones clave
-    col_b1, col_b2, col_b3, col_b4 = st.columns(4)
-    with col_b1:
-        st.metric("Visitas Totales", f"{total_visitas_calc:,}")
-    with col_b2:
-        st.metric("Impactos Totales", f"{total_impactos_calc:,}")
-    with col_b3:
-        st.metric("Impactos Promedio / Visita", f"{impactos_promedio:,.2f}")
-    with col_b4:
-        st.metric("Ayudas Visuales Promedio / Visita", f"{av_promedio:,.2f}")
-
-    st.markdown("---")
-
-    # ==========================================
-    # GRÁFICOS DE TORTA LADO A LADO
-    # ==========================================
-    st.markdown("### Distribución Porcentual: Impactos vs Ayudas Visuales")
-    st.markdown("<span style='color: #B7BCC9;'>Comparativa de participación por productos y líneas de soporte.</span>", unsafe_allow_html=True)
-    st.markdown("---")
-
-    col_t1, col_t2 = st.columns(2)
-
-    # --- COLUMNA 1: Torta de Impactos Promocionales ---
-    with col_t1:
-        if uploaded_impactos is not None or os.path.exists("Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx"):
-            try:
-                path_imp = (
-                    uploaded_impactos
-                    if uploaded_impactos is not None
-                    else "Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx"
-                )
-                df_imp_raw = pd.read_excel(path_imp, header=None)
-
-                real_cols = [3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36, 39]
-                product_impacts = {}
-
-                for r in range(11, len(df_imp_raw)):
-                    prod = df_imp_raw.iloc[r, 1]
-                    if pd.isna(prod):
-                        continue
-                    prod = str(prod).strip()
-                    if prod == "" or prod == "-":
-                        continue
-
-                    row_sum = 0.0
-                    for c in real_cols:
-                        val = df_imp_raw.iloc[r, c]
-                        if pd.notna(val) and val != "-":
-                            try:
-                                row_sum += float(val)
-                            except Exception:
-                                pass
-                    if row_sum > 0:
-                        product_impacts[prod] = product_impacts.get(prod, 0.0) + row_sum
-
-                df_pie_imp = pd.DataFrame(list(product_impacts.items()), columns=["Producto", "Impactos"])
-                df_pie_imp["Producto"] = df_pie_imp["Producto"].astype(str).str.strip()
-                df_pie_imp = df_pie_imp[df_pie_imp["Producto"] != ""].copy()
-                df_pie_imp = df_pie_imp.sort_values(by="Impactos", ascending=False).reset_index(drop=True)
-
-                paleta_donas_av = [
-                    "#00CC96",  # Esmeralda
-                    "#FF2D8F",  # Fucsia
-                    "#F39C12",  # Naranja
-                    "#7A2CFF",  # Morado
-                    "#00B8D9",  # Cian
-                    "#FF6B6B",  # Coral
-                    "#2962FF",  # Azul intenso
-                    "#A3E635",  # Verde lima
-                    "#E879F9",  # Lavanda / Orquídea
-                    "#FACC15",  # Amarillo dorado
-                    "#38BDF8",  # Celeste
-                    "#FB7185",  # Rosa salmón
-                ]
-
-                productos_ordenados = df_pie_imp["Producto"].tolist()
-                mapa_colores_prod = {
-                    prod: paleta_donas_av[i % len(paleta_donas_av)]
-                    for i, prod in enumerate(productos_ordenados)
-                }
-
-                fig_pie_prod = px.pie(
-                    df_pie_imp,
-                    names="Producto",
-                    values="Impactos",
-                    hole=0.42,
-                    template="plotly_dark",
-                    title="<b>Impactos por Producto</b>",
-                    color="Producto",
-                    color_discrete_map=mapa_colores_prod,
-                    category_orders={"Producto": productos_ordenados},
-                )
-                fig_pie_prod.update_traces(
-                    sort=False,
-                    domain=dict(x=[0.16, 0.84], y=[0.14, 0.86]),
-                    textposition="outside",
-                    textinfo="percent+label",
-                    direction="clockwise",
-                    rotation=90,
-                    textfont=dict(color="white", size=11),
-                    pull=[0.02] * len(df_pie_imp),
-                )
-                fig_pie_prod.update_layout(
-                    paper_bgcolor="rgba(0,0,0,0)",
-                    plot_bgcolor="rgba(0,0,0,0)",
-                    height=450,
-                    font=dict(color="white"),
-                    showlegend=False,
-                    margin=dict(t=55, b=35, l=20, r=20),
-                )
-                fig_pie_prod = apply_chart_style(fig_pie_prod, "sec2_beneficios_bloque", show_legend=False)
-                st.plotly_chart(fig_pie_prod, use_container_width=True, key="chart_dona_impactos_prod")
-            except Exception as e:
-                st.error(f"Error en torta de impactos: {e}")
-        else:
-            st.info("Carga el archivo de impactos en la barra lateral.")
-
-    # --- COLUMNA 2: Barras de uso de AVs ---
-    with col_t2:
-        path_av = _resolver_archivo_av()
-
-        if path_av is not None:
-            try:
-                if hasattr(path_av, "seek"):
-                    path_av.seek(0)
-                xls_av = pd.ExcelFile(path_av)
-                df_av_raw = pd.read_excel(path_av, sheet_name=xls_av.sheet_names[0], header=None)
-
-                encabezados_av = {
-                    str(df_av_raw.iloc[0, idx]).strip().lower(): idx
-                    for idx in range(df_av_raw.shape[1])
-                    if pd.notna(df_av_raw.iloc[0, idx])
-                }
-                idx_linea = encabezados_av.get("línea", encabezados_av.get("linea", 4))
-                idx_vis_tot = encabezados_av.get("visitas totales", 6)
-                idx_pres_av = encabezados_av.get("v. presenciales con av", 11)
-                idx_virt_av = encabezados_av.get("v. virtuales con av", 13)
-
-                df_av_work = df_av_raw.iloc[2:].copy()
-                df_av_work["_Linea"] = df_av_work[idx_linea].fillna("").astype(str).str.strip()
-                df_av_work = df_av_work[
-                    (df_av_work["_Linea"] != "")
-                    & (~df_av_work["_Linea"].str.lower().str.startswith("total"))
-                ].copy()
-
-                df_av_work["_Visitas_Totales"] = pd.to_numeric(df_av_work[idx_vis_tot], errors="coerce").fillna(0.0)
-                df_av_work["_Pres_AV"] = pd.to_numeric(df_av_work[idx_pres_av], errors="coerce").fillna(0.0)
-                df_av_work["_Virt_AV"] = pd.to_numeric(df_av_work[idx_virt_av], errors="coerce").fillna(0.0)
-                df_av_work["_Visitas_Con_AV"] = df_av_work["_Pres_AV"] + df_av_work["_Virt_AV"]
-
-                df_av_grp = (
-                    df_av_work.groupby("_Linea", as_index=False)[
-                        ["_Visitas_Totales", "_Pres_AV", "_Virt_AV", "_Visitas_Con_AV"]
-                    ].sum()
-                )
-                df_av_grp = df_av_grp[df_av_grp["_Visitas_Totales"] > 0].copy()
-
-                if len(df_av_grp) > 0:
-                    df_av_grp["Pct_Con_AV"] = (
-                        df_av_grp["_Visitas_Con_AV"] / df_av_grp["_Visitas_Totales"] * 100.0
-                    ).round(1)
-                    df_av_grp["Pct_Sin_AV"] = (100.0 - df_av_grp["Pct_Con_AV"]).round(1)
-
-                    df_av_grp = df_av_grp.sort_values(
-                        by=["Pct_Con_AV", "_Visitas_Con_AV"], ascending=[False, False]
-                    ).reset_index(drop=True)
-
-                    orden_lineas_av = df_av_grp["_Linea"].tolist()
-
-                    fig_av_linea = go.Figure()
-
-                    fig_av_linea.add_trace(
-                        go.Bar(
-                            y=df_av_grp["_Linea"],
-                            x=df_av_grp["Pct_Con_AV"],
-                            name="Visitas con AV",
-                            orientation="h",
-                            marker=dict(color="#00CC96"),
-                            text=[f"{v:.1f}%" for v in df_av_grp["Pct_Con_AV"]],
-                            textposition="outside",
-                            textfont=dict(color="#00CC96", size=12),
-                            cliponaxis=False,
-                            customdata=df_av_grp[["_Visitas_Con_AV", "_Visitas_Totales", "_Pres_AV", "_Virt_AV"]].values,
-                            hovertemplate=(
-                                "<b>%{y}</b><br>"
-                                "Visitas con AV: %{customdata[0]:.0f} de %{customdata[1]:.0f} (%{x:.1f}%)<br>"
-                                "Presenciales con AV: %{customdata[2]:.0f} | Virtuales con AV: %{customdata[3]:.0f}"
-                                "<extra></extra>"
-                            ),
-                        )
-                    )
-
-                    fig_av_linea.add_trace(
-                        go.Bar(
-                            y=df_av_grp["_Linea"],
-                            x=df_av_grp["Pct_Sin_AV"],
-                            name="Visitas sin AV",
-                            orientation="h",
-                            marker=dict(color="#FF2D8F"),
-                            text=[f"{v:.1f}%" if v >= 5.0 else "" for v in df_av_grp["Pct_Sin_AV"]],
-                            textposition="inside",
-                            insidetextanchor="middle",
-                            textfont=dict(color="white", size=15),
-                            hovertemplate=(
-                                "<b>%{y}</b><br>"
-                                "Porcentaje sin AV: %{x:.1f}%<extra></extra>"
-                            ),
-                        )
-                    )
-
-                    fig_av_linea.update_layout(
-                        barmode="stack",
-                        template="plotly_dark",
-                        paper_bgcolor="rgba(0,0,0,0)",
-                        plot_bgcolor="rgba(0,0,0,0)",
-                        height=max(380, len(orden_lineas_av) * 80),
-                        xaxis=dict(title="Porcentaje de Visitas Totales (%)", range=[0, 100]),
-                        yaxis=dict(
-                            title="Línea",
-                            categoryorder="array",
-                            categoryarray=orden_lineas_av[::-1],
-                        ),
-                        font=dict(color="white", size=12),
-                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-                        margin=dict(t=60, b=45, l=160, r=60),
-                        title="<b>Porcentaje de Uso de Ayudas Visuales por Línea (%)</b>",
-                    )
-                    st.plotly_chart(fig_av_linea, use_container_width=True, key="chart_av_100_linea")
-                else:
-                    st.info("No hay visitas totales registradas por línea en el archivo de Ayudas Visuales.")
-            except Exception as e:
-                st.error(f"Error al generar la gráfica de uso de AVs por línea: {e}")
-        else:
-            st.info("Carga el archivo de Ayudas Visuales en la barra lateral.")
-
-    # ==========================================
-    # GRÁFICO DE BARRAS HORIZONTALES (ÚLTIMA POSICIÓN)
-    # ==========================================
-    st.markdown("### Top Impactos Promocionales: Realizados vs Esperados")
-    st.markdown("<span style='color: #B7BCC9;'>Comparativa consolidada entre los impactos esperados y ejecutados por producto.</span>", unsafe_allow_html=True)
-
-    if uploaded_impactos is not None or os.path.exists('Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx'):
-        try:
-            path_imp = uploaded_impactos if uploaded_impactos is not None else 'Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx'
+            path_imp = (
+                uploaded_impactos
+                if uploaded_impactos is not None
+                else "Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx"
+            )
             df_imp_raw = pd.read_excel(path_imp, header=None)
 
-            esp_cols = [2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35, 38]
             real_cols = [3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36, 39]
+            product_impacts = {}
 
-            product_data = {}
             for r in range(11, len(df_imp_raw)):
                 prod = df_imp_raw.iloc[r, 1]
                 if pd.isna(prod):
                     continue
                 prod = str(prod).strip()
-                if prod == '' or prod == '-':
+                if prod == "" or prod == "-":
                     continue
 
-                esp_sum = 0
-                real_sum = 0
-                for c_esp, c_real in zip(esp_cols, real_cols):
-                    val_esp = df_imp_raw.iloc[r, c_esp]
-                    val_real = df_imp_raw.iloc[r, c_real]
-
-                    if pd.notna(val_esp) and val_esp != '-':
+                row_sum = 0.0
+                for c in real_cols:
+                    val = df_imp_raw.iloc[r, c]
+                    if pd.notna(val) and val != "-":
                         try:
-                            esp_sum += float(val_esp)
+                            row_sum += float(val)
                         except Exception:
                             pass
-                    if pd.notna(val_real) and val_real != '-':
-                        try:
-                            real_sum += float(val_real)
-                        except Exception:
-                            pass
+                if row_sum > 0:
+                    product_impacts[prod] = product_impacts.get(prod, 0.0) + row_sum
 
-                if esp_sum > 0 or real_sum > 0:
-                    if prod not in product_data:
-                        product_data[prod] = {'Esp': 0, 'Real': 0}
-                    product_data[prod]['Esp'] += esp_sum
-                    product_data[prod]['Real'] += real_sum
+            df_pie_imp = pd.DataFrame(list(product_impacts.items()), columns=["Producto", "Impactos"])
+            df_pie_imp["Producto"] = df_pie_imp["Producto"].astype(str).str.strip()
+            df_pie_imp = df_pie_imp[df_pie_imp["Producto"] != ""].copy()
+            df_pie_imp = df_pie_imp.sort_values(by="Impactos", ascending=False).reset_index(drop=True)
 
-            df_bar = pd.DataFrame.from_dict(product_data, orient='index').reset_index()
-            df_bar.columns = ['Producto', 'Esperados', 'Real']
-            df_bar['Brecha'] = df_bar['Esperados'] - df_bar['Real']
-            df_bar['Brecha'] = df_bar['Brecha'].apply(lambda x: max(0, x))
-            df_bar['Pct'] = (df_bar['Real'] / df_bar['Esperados'] * 100).fillna(0).round(1)
+            paleta_donas_av = [
+                "#00CC96",  # Esmeralda
+                "#FF2D8F",  # Fucsia
+                "#F39C12",  # Naranja
+                "#7A2CFF",  # Morado
+                "#00B8D9",  # Cian
+                "#FF6B6B",  # Coral
+                "#2962FF",  # Azul intenso
+                "#A3E635",  # Verde lima
+                "#E879F9",  # Lavanda / Orquídea
+                "#FACC15",  # Amarillo dorado
+                "#38BDF8",  # Celeste
+                "#FB7185",  # Rosa salmón
+            ]
 
-            df_bar = df_bar.sort_values(by='Esperados', ascending=True)
+            productos_ordenados = df_pie_imp["Producto"].tolist()
+            mapa_colores_prod = {
+                prod: paleta_donas_av[i % len(paleta_donas_av)]
+                for i, prod in enumerate(productos_ordenados)
+            }
 
-            df_bar['Texto_Real'] = df_bar['Real'].astype(int).astype(str) + " (" + df_bar['Pct'].astype(str) + "%)"
-            df_bar['Texto_Total'] = df_bar['Esperados'].astype(int).astype(str)
-
-            fig_bar_imp = go.Figure()
-
-            fig_bar_imp.add_trace(go.Bar(
-                y=df_bar['Producto'], x=df_bar['Real'], name='Realizados',
-                orientation='h', marker=dict(color='#3DD6FF'),
-                text=df_bar['Texto_Real'], textposition='inside'
-            ))
-
-            fig_bar_imp.add_trace(go.Bar(
-                y=df_bar['Producto'], x=df_bar['Brecha'], name='Brecha Pendiente',
-                orientation='h', marker=dict(color='#FF2D8F'),
-                text=df_bar['Texto_Total'], textposition='outside'
-            ))
-
-            fig_bar_imp.update_layout(
-                template='plotly_dark',
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)',
-                height=500,
-                barmode='stack',
-                xaxis_title="Impactos Esperados",
-                yaxis_title="Producto",
-                font=dict(color='white'),
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            fig_pie_prod = px.pie(
+                df_pie_imp,
+                names="Producto",
+                values="Impactos",
+                hole=0.42,
+                template="plotly_dark",
+                title="<b>Impactos por Producto</b>",
+                color="Producto",
+                color_discrete_map=mapa_colores_prod,
+                category_orders={"Producto": productos_ordenados},
             )
-            st.plotly_chart(fig_bar_imp, use_container_width=True)
-
+            fig_pie_prod.update_traces(
+                sort=False,
+                domain=dict(x=[0.16, 0.84], y=[0.14, 0.86]),
+                textposition="outside",
+                textinfo="percent+label",
+                direction="clockwise",
+                rotation=90,
+                textfont=dict(color="white", size=11),
+                pull=[0.02] * len(df_pie_imp),
+            )
+            fig_pie_prod.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                height=450,
+                font=dict(color="white"),
+                showlegend=False,
+                margin=dict(t=55, b=35, l=20, r=20),
+            )
+            st.plotly_chart(fig_pie_prod, use_container_width=True, key="chart_dona_impactos_prod")
         except Exception as e:
-            st.error(f"Error al procesar el gráfico de impactos: {e}")
+            st.error(f"Error en torta de impactos: {e}")
     else:
-        st.info("💡 Carga el archivo de Impactos Promocionales en la barra lateral para ver esta comparativa.")
+        st.info("Carga el archivo de impactos en la barra lateral.")
 
+# --- COLUMNA 2: Barras de uso de AVs ---
+path_av = (
+    uploaded_av
+    if "uploaded_av" in locals() and uploaded_av is not None
+    else ("Ayudas_visuales.xlsx" if os.path.exists("Ayudas_visuales.xlsx") else None)
+)
 
-if get_chart_cfg("sec2_beneficios_bloque").get("visible", True):
-    render_bloque_2_beneficios()# ==========================================
+if path_av is not None:
+    try:
+        if hasattr(path_av, "seek"):
+            path_av.seek(0)
+        xls_av = pd.ExcelFile(path_av)
+        df_av_raw = pd.read_excel(path_av, sheet_name=xls_av.sheet_names[0], header=None)
+
+        # Localizar columnas por nombre en la fila de encabezados (fila 0), con respaldo por índice
+        encabezados_av = {
+            str(df_av_raw.iloc[0, idx]).strip().lower(): idx
+            for idx in range(df_av_raw.shape[1])
+            if pd.notna(df_av_raw.iloc[0, idx])
+        }
+        idx_linea = encabezados_av.get("línea", encabezados_av.get("linea", 4))
+        idx_vis_tot = encabezados_av.get("visitas totales", 6)
+        idx_pres_av = encabezados_av.get("v. presenciales con av", 11)
+        idx_virt_av = encabezados_av.get("v. virtuales con av", 13)
+
+        df_av_work = df_av_raw.iloc[2:].copy()
+        df_av_work["_Linea"] = df_av_work[idx_linea].fillna("").astype(str).str.strip()
+        df_av_work = df_av_work[
+            (df_av_work["_Linea"] != "")
+            & (~df_av_work["_Linea"].str.lower().str.startswith("total"))
+        ].copy()
+
+        df_av_work["_Visitas_Totales"] = pd.to_numeric(df_av_work[idx_vis_tot], errors="coerce").fillna(0.0)
+        df_av_work["_Pres_AV"] = pd.to_numeric(df_av_work[idx_pres_av], errors="coerce").fillna(0.0)
+        df_av_work["_Virt_AV"] = pd.to_numeric(df_av_work[idx_virt_av], errors="coerce").fillna(0.0)
+        df_av_work["_Visitas_Con_AV"] = df_av_work["_Pres_AV"] + df_av_work["_Virt_AV"]
+
+        df_av_grp = (
+            df_av_work.groupby("_Linea", as_index=False)[
+                ["_Visitas_Totales", "_Pres_AV", "_Virt_AV", "_Visitas_Con_AV"]
+            ].sum()
+        )
+        df_av_grp = df_av_grp[df_av_grp["_Visitas_Totales"] > 0].copy()
+
+        if len(df_av_grp) > 0:
+            df_av_grp["Pct_Con_AV"] = (
+                df_av_grp["_Visitas_Con_AV"] / df_av_grp["_Visitas_Totales"] * 100.0
+            ).round(1)
+            df_av_grp["Pct_Sin_AV"] = (100.0 - df_av_grp["Pct_Con_AV"]).round(1)
+
+            # Ordenar de mayor a menor % de uso de AV (el mayor queda arriba en barras horizontales)
+            df_av_grp = df_av_grp.sort_values(
+                by=["Pct_Con_AV", "_Visitas_Con_AV"], ascending=[False, False]
+            ).reset_index(drop=True)
+
+            orden_lineas_av = df_av_grp["_Linea"].tolist()
+
+            fig_av_linea = go.Figure()
+
+            fig_av_linea.add_trace(
+                go.Bar(
+                    y=df_av_grp["_Linea"],
+                    x=df_av_grp["Pct_Con_AV"],
+                    name="Visitas con AV",
+                    orientation="h",
+                    marker=dict(color="#00CC96"),
+                    text=[f"{v:.1f}%" for v in df_av_grp["Pct_Con_AV"]],
+                    textposition="outside",
+                    textfont=dict(color="#00CC96", size=12),
+                    cliponaxis=False,
+                    customdata=df_av_grp[["_Visitas_Con_AV", "_Visitas_Totales", "_Pres_AV", "_Virt_AV"]].values,
+                    hovertemplate=(
+                        "<b>%{y}</b><br>"
+                        "Visitas con AV: %{customdata[0]:.0f} de %{customdata[1]:.0f} (%{x:.1f}%)<br>"
+                        "Presenciales con AV: %{customdata[2]:.0f} | Virtuales con AV: %{customdata[3]:.0f}"
+                        "<extra></extra>"
+                    ),
+                )
+            )
+
+            fig_av_linea.add_trace(
+                go.Bar(
+                    y=df_av_grp["_Linea"],
+                    x=df_av_grp["Pct_Sin_AV"],
+                    name="Visitas sin AV",
+                    orientation="h",
+                    marker=dict(color="#FF2D8F"),
+                    text=[f"{v:.1f}%" if v >= 5.0 else "" for v in df_av_grp["Pct_Sin_AV"]],
+                    textposition="inside",
+                    insidetextanchor="middle",
+                    textfont=dict(color="white", size=15),
+                    hovertemplate=(
+                        "<b>%{y}</b><br>"
+                        "Porcentaje sin AV: %{x:.1f}%<extra></extra>"
+                    ),
+                )
+            )
+
+            fig_av_linea.update_layout(
+                barmode="stack",
+                template="plotly_dark",
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                height=max(380, len(orden_lineas_av) * 80),
+                xaxis=dict(title="Porcentaje de Visitas Totales (%)", range=[0, 100]),
+                yaxis=dict(
+                    title="Línea",
+                    categoryorder="array",
+                    categoryarray=orden_lineas_av[::-1],
+                ),
+                font=dict(color="white", size=12),
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                margin=dict(t=60, b=45, l=160, r=60),
+                title="<b>Porcentaje de Uso de Ayudas Visuales por Línea (%)</b>",
+            )
+            st.plotly_chart(fig_av_linea, use_container_width=True, key="chart_av_100_linea")
+        else:
+            st.info("No hay visitas totales registradas por línea en el archivo de Ayudas Visuales.")
+    except Exception as e:
+        st.error(f"Error al generar la gráfica de uso de AVs por línea: {e}")
+else:
+    st.info("Carga el archivo de Ayudas Visuales en la barra lateral.")
+# GRÁFICO DE BARRAS HORIZONTALES (ÚLTIMA POSICIÓN)
+# ==========================================
+st.markdown("### Top Impactos Promocionales: Realizados vs Esperados")
+st.markdown("<span style='color: #B7BCC9;'>Comparativa consolidada entre los impactos esperados y ejecutados por producto.</span>", unsafe_allow_html=True)
+
+if uploaded_impactos is not None or os.path.exists('Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx'):
+    try:
+        path_imp = uploaded_impactos if uploaded_impactos is not None else 'Impactos-Promocionales-V2_eadvising_2026-09-21_174401.xlsx'
+        df_imp_raw = pd.read_excel(path_imp, header=None)
+        
+        esp_cols = [2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35, 38]
+        real_cols = [3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36, 39]
+        
+        product_data = {}
+        for r in range(11, len(df_imp_raw)):
+            prod = df_imp_raw.iloc[r, 1]
+            if pd.isna(prod): continue
+            prod = str(prod).strip()
+            if prod == '' or prod == '-': continue
+                
+            esp_sum = 0
+            real_sum = 0
+            for c_esp, c_real in zip(esp_cols, real_cols):
+                val_esp = df_imp_raw.iloc[r, c_esp]
+                val_real = df_imp_raw.iloc[r, c_real]
+                
+                if pd.notna(val_esp) and val_esp != '-':
+                    try: esp_sum += float(val_esp)
+                    except: pass
+                if pd.notna(val_real) and val_real != '-':
+                    try: real_sum += float(val_real)
+                    except: pass
+                    
+            if esp_sum > 0 or real_sum > 0:
+                if prod not in product_data:
+                    product_data[prod] = {'Esp': 0, 'Real': 0}
+                product_data[prod]['Esp'] += esp_sum
+                product_data[prod]['Real'] += real_sum
+                
+        df_bar = pd.DataFrame.from_dict(product_data, orient='index').reset_index()
+        df_bar.columns = ['Producto', 'Esperados', 'Real']
+        df_bar['Brecha'] = df_bar['Esperados'] - df_bar['Real']
+        df_bar['Brecha'] = df_bar['Brecha'].apply(lambda x: max(0, x))
+        df_bar['Pct'] = (df_bar['Real'] / df_bar['Esperados'] * 100).fillna(0).round(1)
+        
+        df_bar = df_bar.sort_values(by='Esperados', ascending=True)
+        
+        df_bar['Texto_Real'] = df_bar['Real'].astype(int).astype(str) + " (" + df_bar['Pct'].astype(str) + "%)"
+        df_bar['Texto_Total'] = df_bar['Esperados'].astype(int).astype(str)
+        
+        fig_bar_imp = go.Figure()
+        
+        fig_bar_imp.add_trace(go.Bar(
+            y=df_bar['Producto'], x=df_bar['Real'], name='Realizados', 
+            orientation='h', marker=dict(color='#3DD6FF'), 
+            text=df_bar['Texto_Real'], textposition='inside'
+        ))
+        
+        fig_bar_imp.add_trace(go.Bar(
+            y=df_bar['Producto'], x=df_bar['Brecha'], name='Brecha Pendiente', 
+            orientation='h', marker=dict(color='#FF2D8F'), 
+            text=df_bar['Texto_Total'], textposition='outside'
+        ))
+        
+        fig_bar_imp.update_layout(
+            template='plotly_dark',
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            height=500,
+            barmode='stack',
+            xaxis_title="Impactos Esperados",
+            yaxis_title="Producto",
+            font=dict(color='white'),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        )
+        st.plotly_chart(fig_bar_imp, use_container_width=True)
+        
+    except Exception as e:
+        st.error(f"Error al procesar el gráfico de impactos: {e}")
+else:
+    st.info("💡 Carga el archivo de Impactos Promocionales en la barra lateral para ver esta comparativa.")
+# ==========================================
 # SECCIÓN 3: ACTITUD FRENTE AL PORTAFOLIO Y ADOPCIÓN
 # ==========================================
 st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
