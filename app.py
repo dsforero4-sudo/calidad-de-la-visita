@@ -775,6 +775,17 @@ def render_bloque_2_beneficios():
     st.markdown("<span style='color: #B7BCC9;'>Análisis de la argumentación clínica, cumplimiento de impactos promocionales y ayudas visuales por visita.</span>", unsafe_allow_html=True)
     st.markdown("---")
 
+    def _resolver_archivo_av():
+        if "uploaded_av" in locals() and uploaded_av is not None:
+            return uploaded_av
+        if os.path.exists("Ayudas_visuales.xlsx"):
+            return "Ayudas_visuales.xlsx"
+        candidatos = [
+            f for f in os.listdir(".")
+            if f.lower().endswith(".xlsx") and ("ayuda" in f.lower() or "visual" in f.lower())
+        ]
+        return candidatos[0] if candidatos else None
+
     # Procesamiento de datos para los 4 indicadores claves
     total_visitas_calc = int(df_unique[col_visita].nunique()) if col_visita and col_visita in df_unique.columns else len(df_unique)
 
@@ -783,17 +794,12 @@ def render_bloque_2_beneficios():
         total_impactos_calc = int(df_impactos['Imp_Real'].sum())
 
     total_av_calc = 64
-    if uploaded_av is not None:
+    av_source_kpi = _resolver_archivo_av()
+    if av_source_kpi is not None:
         try:
-            uploaded_av.seek(0)
-            df_av_temp = pd.read_excel(uploaded_av, skiprows=2, header=None)
-            if df_av_temp.shape[1] > 15:
-                total_av_calc = int(pd.to_numeric(df_av_temp[15], errors='coerce').sum())
-        except Exception:
-            pass
-    elif os.path.exists('Ayudas_visuales.xlsx'):
-        try:
-            df_av_temp = pd.read_excel('Ayudas_visuales.xlsx', skiprows=2, header=None)
+            if hasattr(av_source_kpi, "seek"):
+                av_source_kpi.seek(0)
+            df_av_temp = pd.read_excel(av_source_kpi, skiprows=2, header=None)
             if df_av_temp.shape[1] > 15:
                 total_av_calc = int(pd.to_numeric(df_av_temp[15], errors='coerce').sum())
         except Exception:
@@ -921,11 +927,7 @@ def render_bloque_2_beneficios():
 
     # --- COLUMNA 2: Barras de uso de AVs ---
     with col_t2:
-        path_av = (
-            uploaded_av
-            if "uploaded_av" in locals() and uploaded_av is not None
-            else ("Ayudas_visuales.xlsx" if os.path.exists("Ayudas_visuales.xlsx") else None)
-        )
+        path_av = _resolver_archivo_av()
 
         if path_av is not None:
             try:
@@ -1132,8 +1134,7 @@ def render_bloque_2_beneficios():
 
 
 if get_chart_cfg("sec2_beneficios_bloque").get("visible", True):
-    render_bloque_2_beneficios()
-# ==========================================
+    render_bloque_2_beneficios()# ==========================================
 # SECCIÓN 3: ACTITUD FRENTE AL PORTAFOLIO Y ADOPCIÓN
 # ==========================================
 st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
