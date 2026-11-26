@@ -902,6 +902,7 @@ with col_t1:
                 showlegend=False,
                 margin=dict(t=55, b=35, l=20, r=20),
             )
+            fig_pie_prod = apply_chart_style(fig_pie_prod, "impactos_producto_pie", show_legend=False)
             st.plotly_chart(fig_pie_prod, use_container_width=True, key="chart_dona_impactos_prod")
         except Exception as e:
             st.error(f"Error en torta de impactos: {e}")
