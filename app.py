@@ -88,8 +88,20 @@ def init_chart_admin():
         st.session_state["chart_configs"] = {
             k: dict(v) for k, v in DEFAULT_CHART_CONFIG.items()
         }
+    else:
+        for k, v in DEFAULT_CHART_CONFIG.items():
+            if k not in st.session_state["chart_configs"] or not isinstance(st.session_state["chart_configs"][k], dict):
+                st.session_state["chart_configs"][k] = dict(v)
+            else:
+                for dk, dv in v.items():
+                    st.session_state["chart_configs"][k].setdefault(dk, dv)
+
     if "chart_order" not in st.session_state:
         st.session_state["chart_order"] = list(DEFAULT_CHART_CONFIG.keys())
+    else:
+        for k in DEFAULT_CHART_CONFIG:
+            if k not in st.session_state["chart_order"]:
+                st.session_state["chart_order"].append(k)
 
 
 def get_chart_cfg(chart_id: str) -> dict:
