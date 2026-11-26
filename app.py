@@ -1340,7 +1340,6 @@ if col_impacto and col_impacto in df_visitas.columns:
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=13)),
         )
         fig_stack_100 = apply_chart_style(fig_stack_100, "actitud_producto_100", show_legend=True)
-st.plotly_chart(fig_stack_100, use_container_width=True, key="chart_dist_actitud_producto_100")
         st.plotly_chart(fig_stack_100, use_container_width=True, key="chart_dist_actitud_producto_100")
     else:
         st.info("No se encontró la columna de productos para generar la gráfica apilada.")
