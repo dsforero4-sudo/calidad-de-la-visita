@@ -2051,6 +2051,7 @@ if "df_visitas" in locals() and df_visitas is not None and len(df_visitas) > 0:
                 ),
                 margin=dict(t=55, b=35, l=15, r=20),
             )
+            fig_tipo_pie = apply_chart_style(fig_tipo_pie, "comp_422_pie", show_legend=True)
             st.plotly_chart(fig_tipo_pie, use_container_width=True, key="chart_422_tipos_compromiso_pie")
         else:
             st.info("💡 No hay registros con Tipo de compromiso válido para mostrar.")
