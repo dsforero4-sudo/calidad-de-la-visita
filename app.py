@@ -89,6 +89,15 @@ DEFAULT_CHART_CONFIG = {
         "height": 450,
         "visible": True,
     },
+    "sec2_beneficios_bloque": {
+        "label": "2. Presentación de Beneficios (Impactos y Ayudas Visuales)",
+        "title": "Impactos por Producto",
+        "label_size": 11,
+        "label_color": "#FFFFFF",
+        "legend_size": 12,
+        "height": 450,
+        "visible": True,
+    },
 }
 
 
