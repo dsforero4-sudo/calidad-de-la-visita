@@ -274,6 +274,8 @@ def verificar_password():
 if not verificar_password():
     st.stop()
 
+render_chart_admin_panel()
+
 # ==========================================
 # APLICACIÓN PRINCIPAL
 # ==========================================
