@@ -746,6 +746,8 @@ fig_bar_copia = px.bar(
 )
 fig_bar_copia.update_traces(texttemplate='%{text}%', textposition='outside', textfont_size=15)
 fig_bar_copia.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=max(450, len(rep_copia)*25), font=dict(color='white'))
+fig_bar_copia = apply_chart_style(fig_bar_copia, "objetivos_copypaste", show_legend=False)
+st.plotly_chart(fig_bar_copia, use_container_width=True, key="chart_11_copypaste_objetivos")
 st.plotly_chart(fig_bar_copia, use_container_width=True)
 # ==========================================
 # SECCIÓN 2: PRESENTACIÓN DE BENEFICIOS (IMPACTOS Y AYUDAS VISUALES)
