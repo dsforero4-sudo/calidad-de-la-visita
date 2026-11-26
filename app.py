@@ -1583,14 +1583,21 @@ if df_visitas is not None and len(df_visitas) > 0 and "col_impacto" in locals() 
 else:
     st.info("Carga los datos de visitas y asegúrate de contar con la columna de actitud/impacto.")
 # ==========================================
-    # 4.2.1. Visitas con compromiso (Torta Global + Barras por Representante)
-    # ==========================================
-    st.markdown("### 4.2.1 Visitas con compromiso")
-    st.markdown(
-        "<span style='color: #B7BCC9;'>Proporción de visitas únicas con al menos un compromiso asignado frente a visitas sin compromiso, y desglose porcentual por representante.</span>",
-        unsafe_allow_html=True,
-    )
+# 4.2.1. Visitas con compromiso (Torta Global + Barras por Representante)
+# ==========================================
+st.markdown("### 4.2.1 Visitas con compromiso")
+st.markdown(
+    "<span style='color: #B7BCC9;'>Proporción de visitas únicas con al menos un compromiso asignado frente a visitas sin compromiso, y desglose porcentual por representante.</span>",
+    unsafe_allow_html=True,
+)
 
+def _tiene_compromiso_val(val):
+    if pd.isna(val):
+        return False
+    s = str(val).strip().lower()
+    return s not in ["", "-", "0", "no", "sin compromiso", "nan", "none", "null"]
+
+if "df_visitas" in locals() and df_visitas is not None and len(df_visitas) > 0:
     col_comp = buscar_columna(df_visitas, ["Compromiso", "Compromisos", "Tiene compromiso"])
     col_tipo_comp = buscar_columna(df_visitas, ["Tipo de compromiso", "Tipo compromiso", "Tipo de Compromiso"])
     col_id_vis_comp = buscar_columna(
@@ -1602,12 +1609,6 @@ else:
     _df_base_comp = df_filtered if "df_filtered" in locals() and df_filtered is not None else df_visitas
 
     if col_comp and col_comp in _df_base_comp.columns:
-        def _tiene_compromiso_val(val):
-            if pd.isna(val):
-                return False
-            s = str(val).strip().lower()
-            return s not in ["", "-", "0", "no", "sin compromiso", "nan", "none", "null"]
-
         _df_c_work = _df_base_comp.copy()
         _df_c_work["_Comp_Bool"] = _df_c_work[col_comp].apply(_tiene_compromiso_val)
 
@@ -1681,7 +1682,6 @@ else:
         )
         st.plotly_chart(fig_comp_pie, use_container_width=True, key="chart_421_visitas_compromiso_pie")
 
-        # --- Barras 100% apiladas por Representante ---
         if col_rep_comp and col_rep_comp in _df_c_uniq.columns:
             _df_rep_c = _df_c_uniq[_df_c_uniq[col_rep_comp].notna()].copy()
             _df_rep_c["_Rep_Clean"] = _df_rep_c[col_rep_comp].astype(str).str.strip()
@@ -1841,7 +1841,8 @@ else:
             st.info("💡 No hay registros con Tipo de compromiso válido para mostrar.")
     else:
         st.info("💡 No se encontró la columna 'Tipo de compromiso' en el archivo de visitas.")
-
+else:
+    st.info("💡 Carga los datos de visitas para visualizar la sección de compromisos.")
 # ------------------------------------------
 # 4.5. Auditoria de Calidad Metodologica
 # ------------------------------------------
