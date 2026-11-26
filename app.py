@@ -80,6 +80,15 @@ DEFAULT_CHART_CONFIG = {
         "height": 520,
         "visible": True,
     },
+    "impactos_producto_pie": {
+        "label": "2. Impactos por Producto (Dona)",
+        "title": "Impactos por Producto",
+        "label_size": 11,
+        "label_color": "#FFFFFF",
+        "legend_size": 12,
+        "height": 450,
+        "visible": True,
+    },
 }
 
 
