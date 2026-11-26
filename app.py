@@ -1893,6 +1893,7 @@ if "df_visitas" in locals() and df_visitas is not None and len(df_visitas) > 0:
             ),
             margin=dict(t=55, b=35, l=15, r=20),
         )
+        fig_comp_pie = apply_chart_style(fig_comp_pie, "comp_421_pie", show_legend=True)
         st.plotly_chart(fig_comp_pie, use_container_width=True, key="chart_421_visitas_compromiso_pie")
 
         if col_rep_comp and col_rep_comp in _df_c_uniq.columns:
