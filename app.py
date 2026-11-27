@@ -1248,6 +1248,38 @@ def render_bloque_2_beneficios():
             df_pie_imp = df_pie_imp[df_pie_imp["Producto"] != ""].copy()
             df_pie_imp = df_pie_imp.sort_values(by="Impactos", ascending=False).reset_index(drop=True)
 
+            max_top_n = max(3, min(15, len(df_pie_imp)))
+            default_top_n = min(7, len(df_pie_imp))
+            if len(df_pie_imp) > 7:
+                col_top_ctrl, _ = st.columns([1, 2.5])
+                with col_top_ctrl:
+                    top_n_prod = st.number_input(
+                        "Top productos individuales a mostrar",
+                        min_value=3,
+                        max_value=max_top_n,
+                        value=default_top_n,
+                        step=1,
+                        key="top_n_pie_impactos_prod",
+                    )
+            else:
+                top_n_prod = len(df_pie_imp)
+
+            if len(df_pie_imp) > top_n_prod:
+                df_top_imp = df_pie_imp.iloc[:top_n_prod].copy()
+                df_rest_imp = df_pie_imp.iloc[top_n_prod:].copy()
+                otros_total = float(df_rest_imp["Impactos"].sum())
+                otros_count = len(df_rest_imp)
+                otros_label = f"Otros ({otros_count} productos)"
+                df_pie_plot = pd.concat(
+                    [
+                        df_top_imp,
+                        pd.DataFrame([{"Producto": otros_label, "Impactos": otros_total}]),
+                    ],
+                    ignore_index=True,
+                )
+            else:
+                df_pie_plot = df_pie_imp.copy()
+
             paleta_donas_av = [
                 "#00CC96",  # Esmeralda
                 "#FF2D8F",  # Fucsia
@@ -1263,14 +1295,16 @@ def render_bloque_2_beneficios():
                 "#FB7185",  # Rosa salmón
             ]
 
-            productos_ordenados = df_pie_imp["Producto"].tolist()
-            mapa_colores_prod = {
-                prod: paleta_donas_av[i % len(paleta_donas_av)]
-                for i, prod in enumerate(productos_ordenados)
-            }
+            productos_ordenados = df_pie_plot["Producto"].tolist()
+            mapa_colores_prod = {}
+            for i, prod in enumerate(productos_ordenados):
+                if prod.startswith("Otros ("):
+                    mapa_colores_prod[prod] = "#64748B"
+                else:
+                    mapa_colores_prod[prod] = paleta_donas_av[i % len(paleta_donas_av)]
 
             fig_pie_prod = px.pie(
-                df_pie_imp,
+                df_pie_plot,
                 names="Producto",
                 values="Impactos",
                 hole=0.44,
@@ -1282,24 +1316,33 @@ def render_bloque_2_beneficios():
             )
             fig_pie_prod.update_traces(
                 sort=False,
-                domain=dict(x=[0.22, 0.78], y=[0.10, 0.90]),
-                textposition="outside",
-                textinfo="percent+label",
+                domain=dict(x=[0.04, 0.64], y=[0.08, 0.92]),
+                textposition="inside",
+                textinfo="percent",
+                insidetextorientation="horizontal",
                 direction="clockwise",
                 rotation=90,
-                textfont=dict(color="white", size=12),
-                pull=[0.02] * len(df_pie_imp),
+                textfont=dict(color="white", size=13),
+                pull=[0.02] * len(df_pie_plot),
                 hovertemplate="<b>%{label}</b><br>Impactos: %{value:,.0f}<br>Participación: %{percent}<extra></extra>",
             )
             fig_pie_prod.update_layout(
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(0,0,0,0)",
-                height=480,
+                height=460,
                 font=dict(color="white", size=12),
-                showlegend=False,
-                margin=dict(t=60, b=35, l=40, r=40),
+                showlegend=True,
+                legend=dict(
+                    orientation="v",
+                    yanchor="middle",
+                    y=0.5,
+                    xanchor="left",
+                    x=0.68,
+                    font=dict(color="white", size=12),
+                ),
+                margin=dict(t=60, b=35, l=20, r=20),
             )
-            fig_pie_prod = apply_chart_style(fig_pie_prod, "sec2_beneficios_bloque", show_legend=False)
+            fig_pie_prod = apply_chart_style(fig_pie_prod, "sec2_beneficios_bloque", show_legend=True)
             st.plotly_chart(fig_pie_prod, use_container_width=True, key="chart_dona_impactos_prod")
         except Exception as e:
             st.error(f"Error en torta de impactos: {e}")
@@ -2922,3 +2965,4 @@ if _figuras_reporte:
     )
 else:
     st.info("Carga los reportes correspondientes para generar el HTML para el cliente.")
+Analizando
