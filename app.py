@@ -3002,4 +3002,3 @@ if _figuras_reporte:
     )
 else:
     st.info("Carga los reportes correspondientes para generar el HTML para el cliente.")
-Analizando
