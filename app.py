@@ -2785,9 +2785,10 @@ if _df_52 is not None and len(_df_52) > 0:
             fig_52_pie.update_traces(
                 textposition="inside",
                 textinfo="percent",
+                insidetextorientation="horizontal",
                 direction="clockwise",
                 rotation=90,
-                textfont_color="white",
+                textfont=dict(color="black", size=15),
             )
             fig_52_pie.update_layout(
                 paper_bgcolor="rgba(0,0,0,0)",
@@ -2837,7 +2838,7 @@ if _df_52 is not None and len(_df_52) > 0:
                             text=txts,
                             textposition="inside",
                             insidetextanchor="middle",
-                            textfont=dict(color="white", size=11),
+                            textfont=dict(color="black", size=14),
                         )
                     )
 
@@ -2847,9 +2848,9 @@ if _df_52 is not None and len(_df_52) > 0:
                     template="plotly_dark",
                     paper_bgcolor="rgba(0,0,0,0)",
                     plot_bgcolor="rgba(0,0,0,0)",
-                    height=max(450, n_reps_52 * 25),
+                    height=max(520, n_reps_52 * 32),
                     xaxis=dict(title="Porcentaje de Visitas Únicas (%)", range=[0, 100]),
-                    yaxis=dict(title="Representante"),
+                    yaxis=dict(title="Representante", dtick=1),
                     font=dict(color="white"),
                     legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
                     margin=dict(t=60, b=50, l=150, r=40),
