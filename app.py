@@ -774,19 +774,26 @@ if _df_base_45 is not None and _df_uniq_45 is not None:
             fig_metodo.update_traces(
                 textposition="inside",
                 insidetextanchor="middle",
-                textfont_size=11,
-                textfont_color="white",
+                textfont=dict(size=14, color="#0B132B", family="Arial Black, Segoe UI, sans-serif"),
             )
             fig_metodo.update_layout(
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(0,0,0,0)",
-                height=max(450, n_reps_45 * 25),
+                height=max(520, n_reps_45 * 32),
                 xaxis_title="Cantidad de Visitas Únicas",
                 yaxis_title="Representante",
                 yaxis={"categoryorder": "total ascending"},
-                legend_title="Nivel Metodológico",
+                legend=dict(
+                    title=dict(text=""),
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.02,
+                    xanchor="left",
+                    x=0.0,
+                    font=dict(color="white", size=12),
+                ),
                 font=dict(color="white"),
-                margin=dict(t=50, b=50, l=150, r=40),
+                margin=dict(t=85, b=50, l=220, r=25),
             )
             st.plotly_chart(fig_metodo, use_container_width=True, key="chart_45_metodo_bar")
 
@@ -2965,3 +2972,4 @@ if _figuras_reporte:
     )
 else:
     st.info("Carga los reportes correspondientes para generar el HTML para el cliente.")
+Analizando
