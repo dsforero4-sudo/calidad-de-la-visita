@@ -1228,7 +1228,7 @@ def render_bloque_2_beneficios():
                 if pd.isna(prod):
                     continue
                 prod = str(prod).strip()
-                if prod == "" or prod == "-":
+                if prod == "" or prod == "-" or prod.lower() == "total" or prod.lower().startswith("total "):
                     continue
 
                 row_sum = 0.0
@@ -1463,7 +1463,7 @@ def render_bloque_2_beneficios():
                 if pd.isna(prod):
                     continue
                 prod = str(prod).strip()
-                if prod == "" or prod == "-":
+                if prod == "" or prod == "-" or prod.lower() == "total" or prod.lower().startswith("total "):
                     continue
 
                 esp_sum = 0
@@ -1769,7 +1769,7 @@ if col_impacto and col_impacto in df_visitas.columns:
                     if pd.isna(prod):
                         continue
                     prod = str(prod).strip()
-                    if prod in ['', '-']:
+                    if prod in ['', '-'] or prod.lower() == 'total' or prod.lower().startswith('total '):
                         continue
                     esp_sum = sum(
                         float(df_imp_raw.iloc[r, c])
