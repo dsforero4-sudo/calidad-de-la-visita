@@ -21,9 +21,9 @@ DEFAULT_CHART_CONFIG = {
         "label": "4.1 Actitud por Producto (100%)",
         "title": "Distribución Porcentual de Actitud por Producto",
         "label_size": 15,
-        "label_color": "#FFFFFF",
+        "label_color": "#000000",
         "legend_size": 13,
-        "height": 500,
+        "height": 680,
         "visible": True,
     },
     "promo_41_pie": {
@@ -1692,7 +1692,7 @@ if col_impacto and col_impacto in df_visitas.columns:
             insidetextorientation='horizontal',
             direction='clockwise',
             rotation=90,
-            textfont=dict(color='white', size=13),
+            textfont=dict(color='black', size=15),
             pull=[0.02] * len(df_act_counts),
             hovertemplate="<b>%{label}</b><br>Visitas: %{value:,}<br>Porcentaje: %{percent}<extra></extra>",
         )
@@ -1783,7 +1783,7 @@ if col_impacto and col_impacto in df_visitas.columns:
                     insidetextorientation='horizontal',
                     direction='clockwise',
                     rotation=90,
-                    textfont=dict(color='white', size=13),
+                    textfont=dict(color='black', size=15),
                     pull=[0.02] * len(df_adop_counts),
                     hovertemplate="<b>%{label}</b><br>Contactos: %{value:,}<br>Porcentaje: %{percent}<extra></extra>",
                 )
@@ -1871,21 +1871,25 @@ if col_impacto and col_impacto in df_visitas.columns:
                     text=[f"{v:.1f}%" if v >= 4.0 else "" for v in _vals_pct],
                     textposition='inside',
                     insidetextanchor='middle',
-                    textfont=dict(size=15, color='white'),
+                    textfont=dict(size=15, color='black'),
                 ))
 
+        fig_stack_100 = apply_chart_style(fig_stack_100, "actitud_producto_100", show_legend=True)
+        _cfg_act_100 = get_chart_cfg("actitud_producto_100")
+        fig_stack_100.update_traces(
+            textfont=dict(size=int(_cfg_act_100["label_size"]), color=_cfg_act_100["label_color"])
+        )
         fig_stack_100.update_layout(
             barmode='stack',
             template='plotly_dark',
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)',
-            height=max(500, len(df_pivot) * 44),
+            height=max(int(_cfg_act_100["height"]), len(df_pivot) * 38),
             xaxis=dict(title="Porcentaje (%)", range=[0, 100]),
-            yaxis=dict(title="Producto", categoryorder='array', categoryarray=df_pivot[col_prod_visita].tolist()),
+            yaxis=dict(title="Producto", dtick=1, categoryorder='array', categoryarray=df_pivot[col_prod_visita].tolist()),
             font=dict(color='white', size=13),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=13)),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=int(_cfg_act_100["legend_size"]))),
         )
-        fig_stack_100 = apply_chart_style(fig_stack_100, "actitud_producto_100", show_legend=True)
         st.plotly_chart(fig_stack_100, use_container_width=True, key="chart_dist_actitud_producto_100")
     else:
         st.info("No se encontró la columna de productos para generar la gráfica apilada.")
@@ -2694,10 +2698,11 @@ if _df_51 is not None and len(_df_51) > 0:
         )
         fig_51_pie.update_traces(
             textposition="inside",
-            textinfo="percent+label+value",
+            textinfo="percent+value",
+            insidetextorientation="horizontal",
             direction="clockwise",
             rotation=90,
-            textfont_color="white",
+            textfont=dict(color="black", size=15),
         )
         fig_51_pie.update_layout(
             paper_bgcolor="rgba(0,0,0,0)",
