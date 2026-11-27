@@ -74,10 +74,10 @@ DEFAULT_CHART_CONFIG = {
     "objetivos_copypaste": {
         "label": "2.1 Objetivos - Índice de Copy-Paste",
         "title": "Índice de Copy-Paste en Objetivos (%) por Representante",
-        "label_size": 15,
+        "label_size": 13,
         "label_color": "#FFFFFF",
         "legend_size": 12,
-        "height": 520,
+        "height": 950,
         "visible": True,
     },
     "impactos_producto_pie": {
@@ -1135,9 +1135,25 @@ fig_bar_copia = px.bar(
     color='Pct_Copia', color_continuous_scale=[[0.0, '#3DD6FF'], [0.4, '#7A2CFF'], [0.8, '#FF2D8F'], [1.0, '#9B2C2C']],
     range_color=[0, 100], orientation='h'
 )
-fig_bar_copia.update_traces(texttemplate='%{text}%', textposition='outside', textfont_size=15)
-fig_bar_copia.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=max(450, len(rep_copia)*25), font=dict(color='white'))
 fig_bar_copia = apply_chart_style(fig_bar_copia, "objetivos_copypaste", show_legend=False)
+_cfg_copia = get_chart_cfg("objetivos_copypaste")
+_altura_copia = max(int(_cfg_copia["height"]), len(rep_copia) * 32)
+fig_bar_copia.update_traces(
+    texttemplate='%{text:.1f}%',
+    textposition='outside',
+    cliponaxis=False,
+    textfont=dict(size=int(_cfg_copia["label_size"]), color=_cfg_copia["label_color"]),
+)
+fig_bar_copia.update_layout(
+    paper_bgcolor='rgba(0,0,0,0)',
+    plot_bgcolor='rgba(0,0,0,0)',
+    height=_altura_copia,
+    xaxis=dict(title="Índice de Copy-Paste (%)", range=[0, 112]),
+    yaxis=dict(title="Representante", dtick=1, tickfont=dict(size=12, color="white")),
+    coloraxis_colorbar=dict(title="Copy-Paste (%)"),
+    font=dict(color='white'),
+    margin=dict(t=65, b=50, l=240, r=55),
+)
 st.plotly_chart(fig_bar_copia, use_container_width=True, key="chart_11_copypaste_objetivos")
 
 # ==========================================
