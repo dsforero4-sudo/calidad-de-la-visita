@@ -774,12 +774,19 @@ if _df_base_45 is not None and _df_uniq_45 is not None:
             fig_metodo.update_traces(
                 textposition="inside",
                 insidetextanchor="middle",
-                textfont=dict(size=14, color="#0B132B", family="Arial Black, Segoe UI, sans-serif"),
+                textfont=dict(size=12, color="#0E1118", family="Segoe UI, Arial, sans-serif"),
             )
             fig_metodo.update_layout(
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(0,0,0,0)",
-                height=max(520, n_reps_45 * 32),
+                height=max(550, n_reps_45 * 32),
+                title=dict(
+                    text="<b>Adopción de la Técnica de Ventas por Representante (Penalización Estricta por Copia)</b>",
+                    y=0.98,
+                    yanchor="top",
+                    x=0.0,
+                    xanchor="left",
+                ),
                 xaxis_title="Cantidad de Visitas Únicas",
                 yaxis_title="Representante",
                 yaxis={"categoryorder": "total ascending"},
@@ -787,13 +794,14 @@ if _df_base_45 is not None and _df_uniq_45 is not None:
                     title=dict(text=""),
                     orientation="h",
                     yanchor="bottom",
-                    y=1.02,
+                    y=1.04,
                     xanchor="left",
                     x=0.0,
-                    font=dict(color="white", size=12),
+                    traceorder="normal",
+                    font=dict(color="#E5E7EB", size=12),
                 ),
                 font=dict(color="white"),
-                margin=dict(t=85, b=50, l=220, r=25),
+                margin=dict(t=125, b=50, l=220, r=25),
             )
             st.plotly_chart(fig_metodo, use_container_width=True, key="chart_45_metodo_bar")
 
